@@ -1,0 +1,12 @@
+//- extends layout
+
+//- include mixins/_storeCard
+//- include mixins/_pagination
+
+//- block content
+.inner
+  h2 Teams
+  ul.stores
+    each team in teams
+      li
+        a(href=`/team/${team.abbr}/`)= team.fullName

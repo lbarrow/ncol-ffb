@@ -1,0 +1,21 @@
+//- extends layout
+
+//- include mixins/_storeCard
+//- include mixins/_pagination
+
+//- block content
+.inner
+  h2 Schedule
+  ul.stores
+    each week in weeks
+      h2 Week ##{week._id}
+      ul
+        each game in week.games
+          li
+            div
+                span Week #{game.week}
+            div= game.visitorDisplayName
+            div at
+            div= game.homeDisplayName
+            div= game.gameDate
+            div= game.isoTime

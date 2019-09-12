@@ -1,0 +1,26 @@
+//- extends layout
+
+//- block content
+.inner
+  h2= team.fullName
+  a(href="/teams") back to teams
+  dl
+    dt Abbreviation
+    dd= team.abbr
+    dt Conference
+    dd= team.conferenceAbbr
+    dt Division
+    dd= team.divisionAbbr
+    dt Founded in
+    dd= team.yearFound
+    dt Stadium Name
+    dd= team.stadiumName
+    dt Website
+    dd: a(href=team.teamSiteUrl)= team.teamSiteUrl
+  h3 Roster
+  ul
+    each player in roster
+      li
+        img(src=`/graphics/players/${player.esbId}.png` alt="")
+        a(href=`/player/${player.nflId}/`)= player.displayName
+        div= player.position

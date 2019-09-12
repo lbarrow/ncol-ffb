@@ -1,0 +1,30 @@
+//- extends layout
+
+//- include mixins/_storeCard
+//- include mixins/_pagination
+
+//- block content
+.inner
+  h2 Stats for Week #{week}
+  ul
+    each position in positions
+      li
+        h3= position._id
+        ul
+          each player in position.players
+            li
+              img(src=`/graphics/players/${player.player.esbId}.png` alt="")
+              h4 #{player.player.displayName} #{player.player.position} #{player.player.teamAbbr}
+              p
+                if player.passingAttempts
+                  div #{player.passingCompletions}/#{player.passingAttempts} for #{player.passingYards} yards, #{player.passingTDs} TDs, #{player.passingInts} Ints
+                  if player.passingTwoPts
+                    div #{player.passingTwoPts} Two Point Conversions
+                if player.rushingAttempts
+                  div #{player.rushingAttempts} rushes for #{player.rushingYards} yards, #{player.rushingTDs} TDs
+                  if player.rushingTwoPts
+                    div #{player.rushingTwoPts} Two Point Conversions
+                if player.receivingReceptions
+                  div #{player.receivingReceptions} receptions for #{player.receivingYards} yards, #{player.receivingTDs} TDs
+                  if player.receivingTwoPts
+                    div #{player.receivingTwoPts} Two Point Conversions
