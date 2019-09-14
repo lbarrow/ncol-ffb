@@ -1,0 +1,214 @@
+{
+  "weeks": [
+    {
+      "week": 1,
+      "home": "josh_b",
+      "away": "justin_m"
+    },
+    {
+      "week": 1,
+      "home": "bern_f",
+      "away": "luke_b"
+    },
+    {
+      "week": 1,
+      "home": "justin_g",
+      "away": "nathan_s"
+    },
+    {
+      "week": 2,
+      "home": "justin_m",
+      "away": "bern_f"
+    },
+    {
+      "week": 2,
+      "home": "josh_b",
+      "away": "justin_g"
+    },
+    {
+      "week": 2,
+      "home": "luke_b",
+      "away": "nathan_s"
+    },
+    {
+      "week": 3,
+      "home": "justin_g",
+      "away": "justin_m"
+    },
+    {
+      "week": 3,
+      "home": "nathan_s",
+      "away": "bern_f"
+    },
+    {
+      "week": 3,
+      "home": "luke_b",
+      "away": "josh_b"
+    },
+    {
+      "week": 4,
+      "home": "justin_m",
+      "away": "nathan_s"
+    },
+    {
+      "week": 4,
+      "home": "justin_g",
+      "away": "luke_b"
+    },
+    {
+      "week": 4,
+      "home": "bern_f",
+      "away": "josh_b"
+    },
+    {
+      "week": 5,
+      "home": "luke_b",
+      "away": "justin_m"
+    },
+    {
+      "week": 5,
+      "home": "josh_b",
+      "away": "nathan_s"
+    },
+    {
+      "week": 5,
+      "home": "bern_f",
+      "away": "justin_g"
+    },
+    {
+      "week": 6,
+      "home": "justin_m",
+      "away": "josh_b"
+    },
+    {
+      "week": 6,
+      "home": "luke_b",
+      "away": "bern_f"
+    },
+    {
+      "week": 6,
+      "home": "nathan_s",
+      "away": "justin_g"
+    },
+    {
+      "week": 7,
+      "home": "bern_f",
+      "away": "justin_m"
+    },
+    {
+      "week": 7,
+      "home": "justin_g",
+      "away": "josh_b"
+    },
+    {
+      "week": 7,
+      "home": "nathan_s",
+      "away": "luke_b"
+    },
+    {
+      "week": 8,
+      "home": "justin_m",
+      "away": "justin_g"
+    },
+    {
+      "week": 8,
+      "home": "bern_f",
+      "away": "nathan_s"
+    },
+    {
+      "week": 8,
+      "home": "josh_b",
+      "away": "luke_b"
+    },
+    {
+      "week": 9,
+      "home": "nathan_s",
+      "away": "justin_m"
+    },
+    {
+      "week": 9,
+      "home": "luke_b",
+      "away": "justin_g"
+    },
+    {
+      "week": 9,
+      "home": "josh_b",
+      "away": "bern_f"
+    },
+    {
+      "week": 10,
+      "home": "justin_m",
+      "away": "luke_b"
+    },
+    {
+      "week": 10,
+      "home": "nathan_s",
+      "away": "josh_b"
+    },
+    {
+      "week": 10,
+      "home": "justin_g",
+      "away": "bern_f"
+    },
+    {
+      "week": 11,
+      "home": "josh_b",
+      "away": "justin_m"
+    },
+    {
+      "week": 11,
+      "home": "bern_f",
+      "away": "luke_b"
+    },
+    {
+      "week": 11,
+      "home": "justin_g",
+      "away": "nathan_s"
+    },
+    {
+      "week": 12,
+      "home": "justin_m",
+      "away": "bern_f"
+    },
+    {
+      "week": 12,
+      "home": "josh_b",
+      "away": "justin_g"
+    },
+    {
+      "week": 12,
+      "home": "luke_b",
+      "away": "nathan_s"
+    },
+    {
+      "week": 13,
+      "home": "justin_g",
+      "away": "justin_m"
+    },
+    {
+      "week": 13,
+      "home": "nathan_s",
+      "away": "bern_f"
+    },
+    {
+      "week": 13,
+      "home": "luke_b",
+      "away": "josh_b"
+    },
+    {
+      "week": 14,
+      "home": "justin_m",
+      "away": "nathan_s"
+    },
+    {
+      "week": 14,
+      "home": "justin_g",
+      "away": "luke_b"
+    },
+    {
+      "week": 14,
+      "home": "bern_f",
+      "away": "josh_b"
+    }
+  ]
+}

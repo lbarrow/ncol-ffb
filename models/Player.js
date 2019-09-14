@@ -25,7 +25,8 @@ const playerSchema = new mongoose.Schema(
     teamAbbr: String,
     teamSeq: Number,
     teamId: String,
-    teamFullName: String
+    teamFullName: String,
+    fantasyOwner: String
   },
   {
     toJSON: { virtuals: true },

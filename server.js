@@ -15,6 +15,7 @@ require('./models/Team')
 require('./models/Player')
 require('./models/Statline')
 require('./models/Game')
+require('./models/Matchup')
 
 // Start our app!
 const app = require('./app')

@@ -3,12 +3,14 @@ const mongoose = require('mongoose')
 const path = require('path')
 const moment = require('moment')
 const downloadImage = require('../utility/downloadImage')
+const getCurrentWeek = require('../utility/getCurrentWeek')
 const convertToJSON = require('xml-js')
 
 const Team = mongoose.model('Team')
 const Player = mongoose.model('Player')
 const Game = mongoose.model('Game')
 const Statline = mongoose.model('Statline')
+const Matchup = mongoose.model('Matchup')
 
 // store all teams in db
 exports.parseSchedule = async (req, res) => {
@@ -71,7 +73,19 @@ exports.parseSchedule = async (req, res) => {
   res.json({ regSeasonGames })
 }
 
-exports.getGames = async (req, res) => {
+exports.setupMatchups = async (req, res) => {
+  const matchupsJSONURL = 'http://localhost:4444/matchups.json'
+  const response = await axios(matchupsJSONURL)
+
+  const matchups = response.data.weeks
+
+  await Matchup.deleteMany({}) // clear out existing matchups
+  await Matchup.insertMany(matchups) // insert matchups
+
+  res.send(`${matchups.length} matchups setup`)
+}
+
+exports.parseAllGames = async (req, res) => {
   // get the games from the start of the season until now
   const games = await Game.find({
     isoTime: {
@@ -83,6 +97,33 @@ exports.getGames = async (req, res) => {
 
   // parse them all
   let statlinesCount = 0
+  // statlinesCount += await parseGame(games[10])
+  for (let i = 0; i < games.length; i++) {
+    statlinesCount += await parseGame(games[i])
+    console.log(`${games[i].visitorTeamAbbr} @ ${games[i].homeTeamAbbr} parsed`)
+  }
+
+  res.json({
+    statlinesParsed: statlinesCount,
+    gamesCount
+  })
+}
+
+exports.parseThisWeek = async (req, res) => {
+  // get the games from the start of the season until now
+  const games = await Game.find({
+    week: getCurrentWeek.getCurrentWeek(),
+    isoTime: {
+      $gte: moment('2019-09-05T23:10:00.000+00:00').toDate(),
+      $lt: moment().toDate()
+    }
+  })
+  const gamesCount = games.length
+  console.log(`gamesCount to parse`, gamesCount)
+
+  // parse them all
+  let statlinesCount = 0
+  // statlinesCount += await parseGame(games[10])
   for (let i = 0; i < games.length; i++) {
     statlinesCount += await parseGame(games[i])
     console.log(`${games[i].visitorTeamAbbr} @ ${games[i].homeTeamAbbr} parsed`)
@@ -104,6 +145,18 @@ parseGame = async game => {
   const teamAbbr = teamResponse.data[gameId].home.abbr
   const homeStatsNode = teamResponse.data[gameId].home.stats
   const awayStatsNode = teamResponse.data[gameId].away.stats
+  let homeTeamDef = setupTeamDefense(
+    teamResponse.data[gameId],
+    'home',
+    week,
+    gameId
+  )
+  let awayTeamDef = setupTeamDefense(
+    teamResponse.data[gameId],
+    'away',
+    week,
+    gameId
+  )
   const cleanedStats = [
     ...cleanupStatType(
       homeStatsNode.passing,
@@ -134,6 +187,20 @@ parseGame = async game => {
       gameId
     ),
     ...cleanupStatType(
+      homeStatsNode.fumbles,
+      'fumbles',
+      teamAbbr,
+      week,
+      gameId
+    ),
+    ...cleanupStatType(
+      awayStatsNode.fumbles,
+      'fumbles',
+      teamAbbr,
+      week,
+      gameId
+    ),
+    ...cleanupStatType(
       homeStatsNode.receiving,
       'receiving',
       teamAbbr,
@@ -156,14 +223,18 @@ parseGame = async game => {
         (a, b) => a.set(b.id, Object.assign(a.get(b.id) || {}, b)),
         new Map()
       )
-      .values()
+      .values(),
+    homeTeamDef,
+    awayTeamDef
   ]
 
   // insert or update stats
   for (let index = 0; index < playerStats.length; index++) {
+    if (playerStats[index].position === 'DST') {
+      let p = playerStats[index]
+    }
     const player = await Player.findOne({ gsisId: playerStats[index].id })
     if (player != undefined) {
-      console.log('player.position', player.position)
       await Statline.findOneAndUpdate(
         {
           gsisId: playerStats[index].id,
@@ -181,6 +252,101 @@ parseGame = async game => {
   }
 
   return playerStats.length
+}
+
+function setupTeamDefense(gameNode, teamSide, week, gameId) {
+  const otherSide = teamSide === 'home' ? 'away' : 'home'
+  const scoringNode = gameNode.scrsummary
+
+  // look through defensive players to figure out total sacks and interceptions
+  const defensivePlayers = gameNode[teamSide].stats.defense
+  let sacksFloat = 0.0
+  let ints = 0
+  for (const key in defensivePlayers) {
+    if (defensivePlayers.hasOwnProperty(key)) {
+      let player = defensivePlayers[key]
+      sacksFloat += player.sk
+      ints += player.int
+    }
+  }
+  const sacks = Math.round(sacksFloat) // sacks can be split between players
+
+  // look through fumble node to figure out which ones were lost by the other team
+  let fumbles = 0
+  if (gameNode[otherSide].stats.fumbles) {
+    const fumbleList = gameNode[otherSide].stats.fumbles
+    for (const key in fumbleList) {
+      if (fumbleList.hasOwnProperty(key)) {
+        fumbles += fumbleList[key].lost
+      }
+    }
+  }
+
+  let safeties = 0
+  for (const key in scoringNode) {
+    if (scoringNode.hasOwnProperty(key)) {
+      // make sure it's a TD and it's our team
+      if (
+        scoringNode[key].type === 'SAF' &&
+        scoringNode[key].team === gameNode[teamSide].abbr
+      ) {
+        safeties += 1
+      }
+    }
+  }
+
+  // total up return and defensive TDs
+  let TDs = 0
+  if (gameNode[teamSide].stats.puntret) {
+    const puntReturnerList = gameNode[teamSide].stats.puntret
+    for (const key in puntReturnerList) {
+      if (puntReturnerList.hasOwnProperty(key)) {
+        TDs += puntReturnerList[key].tds
+      }
+    }
+  }
+  if (gameNode[teamSide].stats.kickret) {
+    const kickReturnerList = gameNode[teamSide].stats.kickret
+    for (const key in kickReturnerList) {
+      if (kickReturnerList.hasOwnProperty(key)) {
+        TDs += kickReturnerList[key].tds
+      }
+    }
+  }
+  for (const key in scoringNode) {
+    if (scoringNode.hasOwnProperty(key)) {
+      // make sure it's a TD and it's our team
+      if (
+        scoringNode[key].type === 'TD' &&
+        scoringNode[key].team === gameNode[teamSide].abbr
+      ) {
+        // see if it was an interception or fumble return
+        if (
+          scoringNode[key].desc.includes('interception return') ||
+          scoringNode[key].desc.includes('fumble return')
+        ) {
+          TDs += 1
+        }
+      }
+    }
+  }
+
+  let pointsAllowed = gameNode[otherSide].score.T
+
+  return {
+    id: 'DST_' + gameNode[teamSide].abbr,
+    gsisId: 'DST_' + gameNode[teamSide].abbr,
+    position: 'DST',
+    week,
+    gameId,
+    name: 'DST_' + gameNode[teamSide].abbr,
+    sacks,
+    ints,
+    safeties,
+    fumbles,
+    TDs,
+    pointsAllowed
+  }
 }
 
 function cleanupStatType(positionNode, statType, teamAbbr, week, gameID) {
@@ -232,6 +398,13 @@ function cleanupStatType(positionNode, statType, teamAbbr, week, gameID) {
         delete player.lng
         delete player.lngtd
       }
+      if (statType == 'fumbles') {
+        player.fumbles = player.lost
+        delete player.tot
+        delete player.rcv
+        delete player.trcv
+        delete player.yds
+      }
       players.push(player)
     }
   }
@@ -267,6 +440,25 @@ exports.rosters = async (req, res) => {
     totalPlayers += playersOnTeam
     console.log(`added ${playersOnTeam} players to ${team.fullName}`)
   }
+
+  // setup team DS/Ts
+  const defenses = teams.map(team => {
+    return {
+      season: 2019,
+      gsisId: 'DST_' + team.abbr,
+      nflId: team.nflId,
+      status: 'ACT',
+      displayName: team.fullName,
+      firstName: team.cityState,
+      lastName: team.nick,
+      positionGroup: 'DST',
+      position: 'DST',
+      teamAbbr: team.abbr,
+      teamId: team.teamId,
+      teamFullName: team.fullName
+    }
+  })
+  await Player.insertMany(defenses)
 
   res.send(`Grabbed all ${totalPlayers} players`)
 }
@@ -311,4 +503,52 @@ exports.photos = async (req, res) => {
   }
 
   res.send(`${photosDownloadedCount} photos downloaded of ${roster.length}`)
+}
+
+// assign owners to players
+exports.setupFantasyTeams = async (req, res) => {
+  // for each team (bern, nathan, etc)
+  //    load json file
+  //    iterate through each player, assigning owner to string
+  const fantasyOwners = [
+    'nathan_s',
+    'bern_f',
+    'josh_b',
+    'justin_m',
+    'justin_g',
+    'luke_b'
+  ]
+  for (let i = 0; i < fantasyOwners.length; i++) {
+    const result = await axios.get(
+      `http://localhost:4444/rosters/roster_${fantasyOwners[i]}.json`
+    )
+    const playersToMark = result.data
+    for (
+      let playerIndex = 0;
+      playerIndex < playersToMark.length;
+      playerIndex++
+    ) {
+      // if defenses, search on gsisId
+      let whereClause = { displayName: playersToMark[playerIndex].name }
+      if (playersToMark[playerIndex].position === 'TmD') {
+        whereClause = { gsisId: `DST_${playersToMark[playerIndex].team}` }
+      }
+
+      // mark player as owned
+      const player = await Player.findOneAndUpdate(
+        whereClause,
+        {
+          fantasyOwner: fantasyOwners[i]
+        },
+        { new: true, setDefaultsOnInsert: true }
+      )
+
+      if (!player) {
+        console.log('unable to find', playersToMark[playerIndex].name)
+      } else {
+        // console.log('marked', player.displayName)
+      }
+    }
+  }
+  res.send('done updating rosters')
 }

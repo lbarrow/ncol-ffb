@@ -25,7 +25,14 @@ const statlineSchema = new mongoose.Schema(
     receivingReceptions: Number,
     receivingYards: Number,
     receivingTDs: Number,
-    receivingTwoPts: Number
+    receivingTwoPts: Number,
+    fumbles: Number,
+    sacks: Number,
+    ints: Number,
+    safeties: Number,
+    fumbles: Number,
+    TDs: Number,
+    pointsAllowed: Number
   },
   {
     toJSON: { virtuals: true },
