@@ -105,30 +105,23 @@ exports.matchup = async (req, res) => {
   const matchupId = req.params.id
   const matchup = await Matchup.findById(matchupId)
 
-  // const homeRoster = await Player.find({
-  //   positionGroup: { $in: ['WR', 'TE', 'QB', 'RB', 'DST'] },
-  //   fantasyOwner: matchup.home
-  // }).sort({
-  //   positionGroup: -1
-  // })
-
   const homeStatlines = await calculateFantasyPoints(matchup.week, matchup.home)
-  // const awayStatlines = await calculateFantasyPoints(matchup.week, matchup.away)
+  const awayStatlines = await calculateFantasyPoints(matchup.week, matchup.away)
 
-  const statlines = [
+  const teams = [
     {
       ownerId: matchup.home,
       ...homeStatlines
     },
     {
       ownerId: matchup.away,
-      ...homeStatlines
+      ...awayStatlines
     }
   ]
 
-  res.header('Content-Type', 'application/json')
-  res.send(JSON.stringify(statlines, null, 4))
-  // res.render('matchup', { matchup, statlines })
+  // res.header('Content-Type', 'application/json')
+  // res.send(JSON.stringify(teams, null, 4))
+  res.render('matchup', { matchup, teams })
 }
 
 exports.fantasyTeam = async (req, res) => {
@@ -150,18 +143,30 @@ const calculateFantasyPoints = async (week, fantasyTeamId) => {
     {
       $lookup: {
         from: 'statlines',
-        localField: '_id',
-        foreignField: 'player',
+        let: { id: '$_id' },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ['$player', '$$id'] },
+              week: week
+            }
+          },
+          {
+            $lookup: {
+              from: 'games',
+              let: { gameId: '$gameId' },
+              pipeline: [
+                { $match: { $expr: { $eq: ['$gameId', '$$gameId'] } } }
+              ],
+              as: 'game'
+            }
+          },
+          { $unwind: '$game' }
+        ],
         as: 'statline'
       }
     },
-    // {
-    //   $filter: {
-    //     input: '$statlines',
-    //     as: 'statline',
-    //     cond: { 'statline.week': week }
-    //   }
-    // },
+    { $unwind: '$statline' },
     {
       $group: {
         _id: '$position',
@@ -169,6 +174,7 @@ const calculateFantasyPoints = async (week, fantasyTeamId) => {
           $push: {
             name: '$name',
             statline: '$statline',
+            game: '$game',
             displayName: '$displayName',
             firstName: '$firstName',
             lastName: '$lastName',
@@ -187,15 +193,12 @@ const calculateFantasyPoints = async (week, fantasyTeamId) => {
     { $sort: { _id: 1 } }
   ])
 
-  const t = positions[0].players[0].statline
-  console.log('hi', { t })
-
   // set fantasy points for each player
   positions = positions.map(position => {
     position.players.map(player => {
       let fantasyPoints = 0.0
-      let statline = player.statline
-      if (statline) {
+      if (player.statline) {
+        const statline = player.statline
         if (player.position === 'DST') {
           fantasyPoints += statline.sacks
           fantasyPoints += statline.fumbles * 2
@@ -310,6 +313,7 @@ const calculateFantasyPoints = async (week, fantasyTeamId) => {
       }
     }
   }
+  teamTotal = Math.round(teamTotal * 100) / 100
 
   return {
     positions,

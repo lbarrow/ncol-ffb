@@ -20,7 +20,7 @@ style.
 
 
 .teams
-  each team in statlines
+  each team in teams
     .team
       h2 Stats for Week #{matchup.week} for #{team.ownerId}
       div total fantasy points #{team.teamTotal}
@@ -31,11 +31,13 @@ style.
             ul
               each player in position.players
                 li
-                  img(src=`/graphics/players/${player.esbId}.png` alt="")
+                  if player.position != 'DST'
+                    img(src=`/graphics/players/${player.esbId}.png` alt="")
                   h4 #{player.displayName} #{player.position} #{player.teamAbbr}
-                  if player.best
-                    div BEST
+                  div= player.statline.game.visitorDisplayName
                   if player.statline
+                    if player.best
+                      div BEST
                     if player.position === "DST"
                       div #{player.statline.sacks} sacks
                       div #{player.statline.fumbles} fumbles
@@ -60,3 +62,5 @@ style.
                         if player.statline.fumbles
                           div #{player.statline.fumbles} Fumbles
                     h6 FANTASY POINTS #{player.fantasyPoints}
+                  else
+                    h6 YET TO PLAY
