@@ -123,7 +123,6 @@ exports.parseThisWeek = async (req, res) => {
 
   // parse them all
   let statlinesCount = 0
-  // statlinesCount += await parseGame(games[10])
   for (let i = 0; i < games.length; i++) {
     statlinesCount += await parseGame(games[i])
     console.log(`${games[i].visitorTeamAbbr} @ ${games[i].homeTeamAbbr} parsed`)

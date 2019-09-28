@@ -13,7 +13,6 @@ exports.index = async (req, res) => {
 }
 
 exports.nflSchedule = async (req, res) => {
-  // const games = await Game.find().sort({ gameId: 'asc' })
   const weeks = await Game.aggregate([
     {
       $group: {
@@ -106,21 +105,30 @@ exports.matchup = async (req, res) => {
   const matchupId = req.params.id
   const matchup = await Matchup.findById(matchupId)
 
-  const homeTeam = await calculateFantasyPoints(matchup.week, matchup.home)
-  const awayTeam = await calculateFantasyPoints(matchup.week, matchup.away)
+  // const homeRoster = await Player.find({
+  //   positionGroup: { $in: ['WR', 'TE', 'QB', 'RB', 'DST'] },
+  //   fantasyOwner: matchup.home
+  // }).sort({
+  //   positionGroup: -1
+  // })
 
-  const teams = [
+  const homeStatlines = await calculateFantasyPoints(matchup.week, matchup.home)
+  // const awayStatlines = await calculateFantasyPoints(matchup.week, matchup.away)
+
+  const statlines = [
     {
       ownerId: matchup.home,
-      ...homeTeam
+      ...homeStatlines
     },
     {
       ownerId: matchup.away,
-      ...awayTeam
+      ...homeStatlines
     }
   ]
 
-  res.render('matchup', { matchup, teams })
+  res.header('Content-Type', 'application/json')
+  res.send(JSON.stringify(statlines, null, 4))
+  // res.render('matchup', { matchup, statlines })
 }
 
 exports.fantasyTeam = async (req, res) => {
@@ -131,46 +139,47 @@ exports.fantasyTeam = async (req, res) => {
   res.render('fantasyTeam', { ...positionsAndPoints, week, fantasyTeamId })
 }
 
-calculateFantasyPoints = async (week, fantasyTeamId) => {
-  let positions = await Statline.aggregate([
-    { $match: { position: { $in: ['QB', 'RB', 'TE', 'WR', 'DST'] }, week } },
+const calculateFantasyPoints = async (week, fantasyTeamId) => {
+  let positions = await Player.aggregate([
     {
-      $lookup: {
-        from: 'players',
-        localField: 'player',
-        foreignField: '_id',
-        as: 'player'
+      $match: {
+        position: { $in: ['QB', 'RB', 'TE', 'WR', 'DST'] },
+        fantasyOwner: fantasyTeamId
       }
     },
-    { $unwind: '$player' },
-    { $match: { 'player.fantasyOwner': fantasyTeamId } },
+    {
+      $lookup: {
+        from: 'statlines',
+        localField: '_id',
+        foreignField: 'player',
+        as: 'statline'
+      }
+    },
+    // {
+    //   $filter: {
+    //     input: '$statlines',
+    //     as: 'statline',
+    //     cond: { 'statline.week': week }
+    //   }
+    // },
     {
       $group: {
         _id: '$position',
         players: {
           $push: {
             name: '$name',
-            player: '$player',
-            passingAttempts: '$passingAttempts',
-            passingCompletions: '$passingCompletions',
-            passingInts: '$passingInts',
-            passingTDs: '$passingTDs',
-            passingTwoPts: '$passingTwoPts',
-            passingYards: '$passingYards',
-            rushingAttempts: '$rushingAttempts',
-            rushingTDs: '$rushingTDs',
-            rushingTwoPts: '$rushingTwoPts',
-            rushingYards: '$rushingYards',
-            receivingReceptions: '$receivingReceptions',
-            receivingTDs: '$receivingTDs',
-            receivingTwoPts: '$receivingTwoPts',
-            receivingYards: '$receivingYards',
-            fumbles: '$fumbles',
-            sacks: '$sacks',
-            ints: '$ints',
-            safeties: '$safeties',
-            TDs: '$TDs',
-            pointsAllowed: '$pointsAllowed'
+            statline: '$statline',
+            displayName: '$displayName',
+            firstName: '$firstName',
+            lastName: '$lastName',
+            esbId: '$esbId',
+            gsisId: '$gsisId',
+            positionGroup: '$positionGroup',
+            position: '$position',
+            teamAbbr: '$teamAbbr',
+            teamId: '$teamId',
+            teamFullName: '$teamFullName',
+            fantasyOwner: '$fantasyOwner'
           }
         }
       }
@@ -178,83 +187,90 @@ calculateFantasyPoints = async (week, fantasyTeamId) => {
     { $sort: { _id: 1 } }
   ])
 
+  const t = positions[0].players[0].statline
+  console.log('hi', { t })
+
   // set fantasy points for each player
   positions = positions.map(position => {
     position.players.map(player => {
       let fantasyPoints = 0.0
-      if (player.player.position === 'DST') {
-        fantasyPoints += player.sacks
-        fantasyPoints += player.fumbles * 2
-        fantasyPoints += player.ints * 2
-        fantasyPoints += player.safeties * 2
-        fantasyPoints += player.TDs * 6
-        if (player.pointsAllowed == 0) {
-          fantasyPoints += 10
-        }
-        if (player.pointsAllowed > 0 && player.pointsAllowed <= 6) {
-          fantasyPoints += 7
-        }
-        if (player.pointsAllowed > 6 && player.pointsAllowed <= 20) {
-          fantasyPoints += 4
-        }
-        if (player.pointsAllowed > 20 && player.pointsAllowed <= 29) {
-          fantasyPoints += 1
-        }
-        if (player.pointsAllowed > 29) {
-          fantasyPoints -= 3
-        }
-      } else {
-        if (player.passingAttempts) {
-          fantasyPoints += player.passingYards / 25
-          fantasyPoints += player.passingInts * -2
-          fantasyPoints += player.passingTDs * 6
-          fantasyPoints += player.passingTwoPts * 2
-          if (player.passingYards > 300) {
+      let statline = player.statline
+      if (statline) {
+        if (player.position === 'DST') {
+          fantasyPoints += statline.sacks
+          fantasyPoints += statline.fumbles * 2
+          fantasyPoints += statline.ints * 2
+          fantasyPoints += statline.safeties * 2
+          fantasyPoints += statline.TDs * 6
+          if (statline.pointsAllowed == 0) {
+            fantasyPoints += 10
+          }
+          if (statline.pointsAllowed > 0 && statline.pointsAllowed <= 6) {
+            fantasyPoints += 7
+          }
+          if (statline.pointsAllowed > 6 && statline.pointsAllowed <= 20) {
+            fantasyPoints += 4
+          }
+          if (statline.pointsAllowed > 20 && statline.pointsAllowed <= 29) {
             fantasyPoints += 1
           }
-          if (player.passingYards > 400) {
-            fantasyPoints += 2
+          if (statline.pointsAllowed > 29) {
+            fantasyPoints -= 3
           }
-          if (player.passingYards > 500) {
-            fantasyPoints += 3
+        } else {
+          if (statline.passingAttempts) {
+            fantasyPoints += statline.passingYards / 25
+            fantasyPoints += statline.passingInts * -2
+            fantasyPoints += statline.passingTDs * 6
+            fantasyPoints += statline.passingTwoPts * 2
+            if (statline.passingYards > 300) {
+              fantasyPoints += 1
+            }
+            if (statline.passingYards > 400) {
+              fantasyPoints += 2
+            }
+            if (statline.passingYards > 500) {
+              fantasyPoints += 3
+            }
           }
-        }
-        if (player.rushingAttempts) {
-          fantasyPoints += player.rushingYards / 10
-          fantasyPoints += player.rushingTDs * 6
-          fantasyPoints += player.rushingTwoPts * 2
-          if (player.rushingYards > 100) {
-            fantasyPoints += 2
+          if (statline.rushingAttempts) {
+            fantasyPoints += statline.rushingYards / 10
+            fantasyPoints += statline.rushingTDs * 6
+            fantasyPoints += statline.rushingTwoPts * 2
+            if (statline.rushingYards > 100) {
+              fantasyPoints += 2
+            }
+            if (statline.rushingYards > 150) {
+              fantasyPoints += 3
+            }
+            if (statline.rushingYards > 200) {
+              fantasyPoints += 4
+            }
           }
-          if (player.rushingYards > 150) {
-            fantasyPoints += 3
+          if (statline.receivingReceptions) {
+            fantasyPoints += statline.receivingReceptions
+            fantasyPoints += statline.receivingYards / 10
+            fantasyPoints += statline.receivingTDs * 6
+            fantasyPoints += statline.receivingTwoPts * 2
+            if (statline.receivingYards > 100) {
+              fantasyPoints += 2
+            }
+            if (statline.receivingYards > 150) {
+              fantasyPoints += 3
+            }
+            if (statline.receivingYards > 200) {
+              fantasyPoints += 4
+            }
           }
-          if (player.rushingYards > 200) {
-            fantasyPoints += 4
+          if (statline.fumbles) {
+            fantasyPoints += statline.fumbles * -2
           }
-        }
-        if (player.receivingReceptions) {
-          fantasyPoints += player.receivingReceptions
-          fantasyPoints += player.receivingYards / 10
-          fantasyPoints += player.receivingTDs * 6
-          fantasyPoints += player.receivingTwoPts * 2
-          if (player.receivingYards > 100) {
-            fantasyPoints += 2
-          }
-          if (player.receivingYards > 150) {
-            fantasyPoints += 3
-          }
-          if (player.receivingYards > 200) {
-            fantasyPoints += 4
-          }
-        }
-        if (player.fumbles) {
-          fantasyPoints += player.fumbles * -2
         }
       }
       player.fantasyPoints = Math.round(fantasyPoints * 100) / 100
       return player
     })
+
     return position
   })
 

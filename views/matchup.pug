@@ -18,8 +18,9 @@ style.
     span #{matchup.away}
   h4 Week #{matchup.week}
 
+
 .teams
-  each team in teams
+  each team in statlines
     .team
       h2 Stats for Week #{matchup.week} for #{team.ownerId}
       div total fantasy points #{team.teamTotal}
@@ -30,31 +31,32 @@ style.
             ul
               each player in position.players
                 li
-                  img(src=`/graphics/players/${player.player.esbId}.png` alt="")
-                  h4 #{player.player.displayName} #{player.player.position} #{player.player.teamAbbr}
+                  img(src=`/graphics/players/${player.esbId}.png` alt="")
+                  h4 #{player.displayName} #{player.position} #{player.teamAbbr}
                   if player.best
                     div BEST
-                  if player.player.position === "DST"
-                    div #{player.sacks} sacks
-                    div #{player.fumbles} fumbles
-                    div #{player.ints} ints
-                    div #{player.safeties} safeties
-                    div #{player.TDs} TDs
-                    div #{player.pointsAllowed} pointsAllowed
-                  else
-                    p
-                      if player.passingAttempts
-                        div #{player.passingCompletions}/#{player.passingAttempts} for #{player.passingYards} yards, #{player.passingTDs} TDs, #{player.passingInts} Ints
-                        if player.passingTwoPts
-                          div #{player.passingTwoPts} Two Point Conversions
-                      if player.rushingAttempts
-                        div #{player.rushingAttempts} rushes for #{player.rushingYards} yards, #{player.rushingTDs} TDs
-                        if player.rushingTwoPts
-                          div #{player.rushingTwoPts} Two Point Conversions
-                      if player.receivingReceptions
-                        div #{player.receivingReceptions} receptions for #{player.receivingYards} yards, #{player.receivingTDs} TDs
-                        if player.receivingTwoPts
-                          div #{player.receivingTwoPts} Two Point Conversions
-                      if player.fumbles
-                        div #{player.fumbles} Fumbles
-                  h6 FANTASY POINTS #{player.fantasyPoints}
+                  if player.statline
+                    if player.position === "DST"
+                      div #{player.statline.sacks} sacks
+                      div #{player.statline.fumbles} fumbles
+                      div #{player.statline.ints} ints
+                      div #{player.statline.safeties} safeties
+                      div #{player.statline.TDs} TDs
+                      div #{player.statline.pointsAllowed} pointsAllowed
+                    else
+                      p
+                        if player.statline.passingAttempts
+                          div #{player.statline.passingCompletions}/#{player.statline.passingAttempts} for #{player.statline.passingYards} yards, #{player.statline.passingTDs} TDs, #{player.statline.passingInts} Ints
+                          if player.statline.passingTwoPts
+                            div #{player.statline.passingTwoPts} Two Point Conversions
+                        if player.statline.rushingAttempts
+                          div #{player.statline.rushingAttempts} rushes for #{player.statline.rushingYards} yards, #{player.statline.rushingTDs} TDs
+                          if player.statline.rushingTwoPts
+                            div #{player.statline.rushingTwoPts} Two Point Conversions
+                        if player.statline.receivingReceptions
+                          div #{player.statline.receivingReceptions} receptions for #{player.statline.receivingYards} yards, #{player.statline.receivingTDs} TDs
+                          if player.statline.receivingTwoPts
+                            div #{player.statline.receivingTwoPts} Two Point Conversions
+                        if player.statline.fumbles
+                          div #{player.statline.fumbles} Fumbles
+                    h6 FANTASY POINTS #{player.fantasyPoints}
