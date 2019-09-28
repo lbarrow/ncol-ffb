@@ -33,8 +33,12 @@ style.
                 li
                   if player.position != 'DST'
                     img(src=`/graphics/players/${player.esbId}.png` alt="")
+                  h4 #{player.teamId}
                   h4 #{player.displayName} #{player.position} #{player.teamAbbr}
-                  div= player.statline.game.visitorDisplayName
+                  if player.game
+                    div #{player.game.visitorDisplayName} @ #{player.game.homeDisplayName}
+                  else
+                    div BYE
                   if player.statline
                     if player.best
                       div BEST

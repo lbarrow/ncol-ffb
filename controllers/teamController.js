@@ -150,23 +150,33 @@ const calculateFantasyPoints = async (week, fantasyTeamId) => {
               $expr: { $eq: ['$player', '$$id'] },
               week: week
             }
-          },
-          {
-            $lookup: {
-              from: 'games',
-              let: { gameId: '$gameId' },
-              pipeline: [
-                { $match: { $expr: { $eq: ['$gameId', '$$gameId'] } } }
-              ],
-              as: 'game'
-            }
-          },
-          { $unwind: '$game' }
+          }
         ],
         as: 'statline'
       }
     },
-    { $unwind: '$statline' },
+    { $unwind: { path: '$statline', preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: 'games',
+        let: { teamId: '$teamId' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $or: [
+                  { $eq: ['$homeTeamId', '$$teamId'] },
+                  { $eq: ['$visitorTeamId', '$$teamId'] }
+                ]
+              },
+              week: week
+            }
+          }
+        ],
+        as: 'game'
+      }
+    },
+    { $unwind: { path: '$game', preserveNullAndEmptyArrays: true } },
     {
       $group: {
         _id: '$position',
