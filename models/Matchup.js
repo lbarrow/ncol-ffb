@@ -5,7 +5,9 @@ const matchupSchema = new mongoose.Schema(
   {
     week: Number,
     home: String,
-    away: String
+    homeScore: Number,
+    away: String,
+    awayScore: Number
   },
   {
     toJSON: { virtuals: true },

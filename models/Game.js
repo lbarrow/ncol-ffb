@@ -23,7 +23,16 @@ const gameSchema = new mongoose.Schema(
     visitorNickname: String,
     gameType: String,
     weekNameAbbr: String,
-    weekName: String
+    weekName: String,
+    homeScore: Number,
+    visitorScore: Number,
+    yardline: String,
+    quarter: String,
+    down: Number,
+    yardsToGo: Number,
+    clock: String,
+    possessingTeamAbbr: String,
+    redzone: Boolean
   },
   {
     toJSON: { virtuals: true },

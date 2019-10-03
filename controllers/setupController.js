@@ -11,6 +11,7 @@ const Player = mongoose.model('Player')
 const Game = mongoose.model('Game')
 const Statline = mongoose.model('Statline')
 const Matchup = mongoose.model('Matchup')
+const Owner = mongoose.model('Owner')
 
 // store all teams in db
 exports.parseSchedule = async (req, res) => {
@@ -85,6 +86,47 @@ exports.setupMatchups = async (req, res) => {
   res.send(`${matchups.length} matchups setup`)
 }
 
+exports.updateOwnerRecord = async (req, res) => {
+  const owners = await Owner.find()
+  const week = getCurrentWeek.getCurrentWeek() - 1 // evaluate all matchups before now
+  // for each owner
+  for (let i = 0; i < owners.length; i++) {
+    let wins = 0
+    let losses = 0
+    const ownerId = owners[i].ownerId
+    // find all matchups involving this owner
+    const matchups = await Matchup.find({
+      $or: [{ home: ownerId }, { away: ownerId }],
+      week: {
+        $lte: week
+      }
+    })
+
+    // figure out if won or lost this matchup
+    for (let i = 0; i < matchups.length; i++) {
+      if (matchups[i].home === ownerId) {
+        if (matchups[i].homeScore > matchups[i].awayScore) {
+          wins++
+        } else {
+          losses++
+        }
+      } else {
+        if (matchups[i].awayScore > matchups[i].homeScore) {
+          wins++
+        } else {
+          losses++
+        }
+      }
+    }
+
+    // save wins and losses to db
+    owners[i].wins = wins
+    owners[i].losses = losses
+    await owners[i].save()
+  }
+  res.send(`${owners.length} owners records set`)
+}
+
 exports.parseAllGames = async (req, res) => {
   // get the games from the start of the season until now
   const games = await Game.find({
@@ -103,6 +145,11 @@ exports.parseAllGames = async (req, res) => {
     console.log(`${games[i].visitorTeamAbbr} @ ${games[i].homeTeamAbbr} parsed`)
   }
 
+  const week = getCurrentWeek.getCurrentWeek()
+  for (let i = 1; i <= week; i++) {
+    await updateFantasyPointsForMatchups(i)
+  }
+
   res.json({
     statlinesParsed: statlinesCount,
     gamesCount
@@ -111,8 +158,9 @@ exports.parseAllGames = async (req, res) => {
 
 exports.parseThisWeek = async (req, res) => {
   // get the games from the start of the season until now
+  const week = getCurrentWeek.getCurrentWeek()
   const games = await Game.find({
-    week: getCurrentWeek.getCurrentWeek(),
+    week,
     isoTime: {
       $gte: moment('2019-09-05T23:10:00.000+00:00').toDate(),
       $lt: moment().toDate()
@@ -128,34 +176,187 @@ exports.parseThisWeek = async (req, res) => {
     console.log(`${games[i].visitorTeamAbbr} @ ${games[i].homeTeamAbbr} parsed`)
   }
 
+  await updateFantasyPointsForMatchups(week)
+
   res.json({
     statlinesParsed: statlinesCount,
     gamesCount
   })
 }
 
+updateFantasyPointsForMatchups = async week => {
+  const matchups = await Matchup.find({ week })
+  for (let i = 0; i < matchups.length; i++) {
+    matchups[i].homeScore = await totalPointsForTeamWeek(matchups[i].home, week)
+    matchups[i].awayScore = await totalPointsForTeamWeek(matchups[i].away, week)
+    await matchups[i].save()
+  }
+}
+
+function markBestPlayers(bestSpots, players) {
+  for (let i = 0; i < players.length; i++) {
+    if (i < bestSpots) {
+      players[i].best = true
+    }
+  }
+}
+
+totalPointsForTeamWeek = async (fantasyTeamId, week) => {
+  let positions = await Player.aggregate([
+    {
+      $match: {
+        position: { $in: ['QB', 'RB', 'TE', 'WR', 'DST'] },
+        fantasyOwner: fantasyTeamId
+      }
+    },
+    {
+      $lookup: {
+        from: 'statlines',
+        let: { id: '$_id' },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ['$player', '$$id'] },
+              week: week
+            }
+          }
+        ],
+        as: 'statline'
+      }
+    },
+    { $unwind: { path: '$statline', preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: 'games',
+        let: { teamId: '$teamId' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $or: [
+                  { $eq: ['$homeTeamId', '$$teamId'] },
+                  { $eq: ['$visitorTeamId', '$$teamId'] }
+                ]
+              },
+              week: week
+            }
+          }
+        ],
+        as: 'game'
+      }
+    },
+    { $unwind: { path: '$game', preserveNullAndEmptyArrays: true } },
+    {
+      $group: {
+        _id: '$position',
+        players: {
+          $push: {
+            name: '$name',
+            statline: '$statline',
+            game: '$game',
+            displayName: '$displayName',
+            firstName: '$firstName',
+            lastName: '$lastName',
+            esbId: '$esbId',
+            gsisId: '$gsisId',
+            positionGroup: '$positionGroup',
+            position: '$position',
+            teamAbbr: '$teamAbbr',
+            teamId: '$teamId',
+            teamFullName: '$teamFullName',
+            fantasyOwner: '$fantasyOwner'
+          }
+        }
+      }
+    },
+    { $sort: { _id: 1 } }
+  ])
+
+  // sort the positions in specific order
+  const sortOrder = ['QB', 'RB', 'WR', 'TE', 'DST']
+  positions = positions.sort(function(a, b) {
+    return sortOrder.indexOf(a._id) > sortOrder.indexOf(b._id)
+  })
+
+  // move fantasy points to player level
+  positions = positions.map(position => {
+    position.players.map(player => {
+      let fantasyPoints = 0.0
+      if (player.statline) {
+        fantasyPoints = player.statline.fantasyPoints
+      }
+      player.fantasyPoints = Math.round(fantasyPoints * 100) / 100
+      return player
+    })
+
+    return position
+  })
+
+  // mark best x positions
+  positions = positions.map(position => {
+    position.players.sort(function(a, b) {
+      return b.fantasyPoints - a.fantasyPoints
+    })
+
+    let bestSpots
+    if (position._id === 'QB') {
+      bestSpots = 2
+    }
+    if (position._id === 'RB') {
+      bestSpots = 4
+    }
+    if (position._id === 'WR') {
+      bestSpots = 6
+    }
+    if (position._id === 'TE') {
+      bestSpots = 2
+    }
+    if (position._id === 'DST') {
+      bestSpots = 2
+    }
+    markBestPlayers(bestSpots, position.players)
+
+    return position
+  })
+
+  // figure out total points
+  let teamTotal = 0.0
+  for (let i = 0; i < positions.length; i++) {
+    for (let j = 0; j < positions[i].players.length; j++) {
+      if (positions[i].players[j].best) {
+        teamTotal += positions[i].players[j].fantasyPoints
+      }
+    }
+  }
+  return Math.round(teamTotal * 100) / 100
+}
+
 parseGame = async game => {
-  const teamResponse = await axios.get(
-    `http://www.nfl.com/liveupdate/game-center/${game.gameId}/${game.gameId}_gtd.json`
-  )
-  // const teamResponse = await axios.get('http://localhost:4444/game.json')
   const week = game.week
   const gameId = game.gameId
-  const teamAbbr = teamResponse.data[gameId].home.abbr
-  const homeStatsNode = teamResponse.data[gameId].home.stats
-  const awayStatsNode = teamResponse.data[gameId].away.stats
-  let homeTeamDef = setupTeamDefense(
-    teamResponse.data[gameId],
-    'home',
-    week,
-    gameId
+  const teamResponse = await axios.get(
+    `http://www.nfl.com/liveupdate/game-center/${gameId}/${gameId}_gtd.json`
   )
-  let awayTeamDef = setupTeamDefense(
-    teamResponse.data[gameId],
-    'away',
-    week,
-    gameId
-  )
+  // const teamResponse = await axios.get('http://localhost:4444/game.json')
+  const gameStatsData = teamResponse.data[gameId]
+
+  // update game first
+  game.yardline = gameStatsData.yl
+  game.quarter = gameStatsData.qtr
+  game.down = gameStatsData.down
+  game.yardsToGo = gameStatsData.togo
+  game.clock = gameStatsData.clock
+  game.possessingTeamAbbr = gameStatsData.posteam
+  game.redzone = gameStatsData.redzone
+  game.homeScore = gameStatsData.home.score.T
+  game.visitorScore = gameStatsData.away.score.T
+  game.save()
+
+  const teamAbbr = gameStatsData.home.abbr
+  const homeStatsNode = gameStatsData.home.stats
+  const awayStatsNode = gameStatsData.away.stats
+  let homeTeamDef = setupTeamDefense(gameStatsData, 'home', week, gameId)
+  let awayTeamDef = setupTeamDefense(gameStatsData, 'away', week, gameId)
   const cleanedStats = [
     ...cleanupStatType(
       homeStatsNode.passing,
@@ -229,11 +430,82 @@ parseGame = async game => {
 
   // insert or update stats
   for (let index = 0; index < playerStats.length; index++) {
-    if (playerStats[index].position === 'DST') {
-      let p = playerStats[index]
-    }
     const player = await Player.findOne({ gsisId: playerStats[index].id })
     if (player != undefined) {
+      let fantasyPoints = 0.0
+      let stats = playerStats[index]
+      if (player.position === 'DST') {
+        fantasyPoints += stats.sacks
+        fantasyPoints += stats.fumbles * 2
+        fantasyPoints += stats.ints * 2
+        fantasyPoints += stats.safeties * 2
+        fantasyPoints += stats.TDs * 6
+        if (stats.pointsAllowed == 0) {
+          fantasyPoints += 10
+        }
+        if (stats.pointsAllowed > 0 && stats.pointsAllowed <= 6) {
+          fantasyPoints += 7
+        }
+        if (stats.pointsAllowed > 6 && stats.pointsAllowed <= 20) {
+          fantasyPoints += 4
+        }
+        if (stats.pointsAllowed > 20 && stats.pointsAllowed <= 29) {
+          fantasyPoints += 1
+        }
+        if (stats.pointsAllowed > 29) {
+          fantasyPoints -= 3
+        }
+      } else {
+        if (stats.passingAttempts) {
+          fantasyPoints += stats.passingYards / 25
+          fantasyPoints += stats.passingInts * -2
+          fantasyPoints += stats.passingTDs * 6
+          fantasyPoints += stats.passingTwoPts * 2
+          if (stats.passingYards >= 300) {
+            fantasyPoints += 1
+          }
+          if (stats.passingYards >= 400) {
+            fantasyPoints += 2
+          }
+          if (stats.passingYards >= 500) {
+            fantasyPoints += 3
+          }
+        }
+        if (stats.rushingAttempts) {
+          fantasyPoints += stats.rushingYards / 10
+          fantasyPoints += stats.rushingTDs * 6
+          fantasyPoints += stats.rushingTwoPts * 2
+          if (stats.rushingYards >= 100) {
+            fantasyPoints += 2
+          }
+          if (stats.rushingYards >= 150) {
+            fantasyPoints += 3
+          }
+          if (stats.rushingYards >= 200) {
+            fantasyPoints += 4
+          }
+        }
+        if (stats.receivingReceptions) {
+          fantasyPoints += stats.receivingReceptions
+          fantasyPoints += stats.receivingYards / 10
+          fantasyPoints += stats.receivingTDs * 6
+          fantasyPoints += stats.receivingTwoPts * 2
+          if (stats.receivingYards >= 100) {
+            fantasyPoints += 2
+          }
+          if (stats.receivingYards >= 150) {
+            fantasyPoints += 3
+          }
+          if (stats.receivingYards >= 200) {
+            fantasyPoints += 4
+          }
+        }
+        if (stats.fumbles) {
+          fantasyPoints += stats.fumbles * -2
+        }
+      }
+      stats.fantasyPoints = Math.round(fantasyPoints * 100) / 100
+
       await Statline.findOneAndUpdate(
         {
           gsisId: playerStats[index].id,
@@ -241,7 +513,7 @@ parseGame = async game => {
           player: player._id,
           position: player.position
         },
-        playerStats[index],
+        stats,
         { upsert: true, new: true, setDefaultsOnInsert: true }
       )
     } else {
@@ -504,22 +776,27 @@ exports.photos = async (req, res) => {
   res.send(`${photosDownloadedCount} photos downloaded of ${roster.length}`)
 }
 
-// assign owners to players
+// assign players to owners
 exports.setupFantasyTeams = async (req, res) => {
+  const fantasyOwners = [
+    { ownerId: 'justin_g', displayName: 'Justin’s Lobos' },
+    { ownerId: 'justin_m', displayName: 'Justin’s Giant Titans' },
+    { ownerId: 'bern_f', displayName: 'Bern’s Recruits' },
+    { ownerId: 'nathan_s', displayName: 'Nate’s Bench Warmers' },
+    { ownerId: 'luke_b', displayName: 'Luke’s Newbies' },
+    { ownerId: 'josh_b', displayName: 'Mitch’s Burgers' }
+  ]
+
+  // setup owners
+  await Owner.deleteMany({})
+  await Owner.insertMany(fantasyOwners)
+
   // for each team (bern, nathan, etc)
   //    load json file
   //    iterate through each player, assigning owner to string
-  const fantasyOwners = [
-    'nathan_s',
-    'bern_f',
-    'josh_b',
-    'justin_m',
-    'justin_g',
-    'luke_b'
-  ]
   for (let i = 0; i < fantasyOwners.length; i++) {
     const result = await axios.get(
-      `http://localhost:4444/rosters/roster_${fantasyOwners[i]}.json`
+      `http://localhost:4444/rosters/roster_${fantasyOwners[i].ownerId}.json`
     )
     const playersToMark = result.data
     for (
@@ -537,7 +814,7 @@ exports.setupFantasyTeams = async (req, res) => {
       const player = await Player.findOneAndUpdate(
         whereClause,
         {
-          fantasyOwner: fantasyOwners[i]
+          fantasyOwner: fantasyOwners[i].ownerId
         },
         { new: true, setDefaultsOnInsert: true }
       )

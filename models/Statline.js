@@ -32,7 +32,8 @@ const statlineSchema = new mongoose.Schema(
     safeties: Number,
     fumbles: Number,
     TDs: Number,
-    pointsAllowed: Number
+    pointsAllowed: Number,
+    fantasyPoints: Number
   },
   {
     toJSON: { virtuals: true },
