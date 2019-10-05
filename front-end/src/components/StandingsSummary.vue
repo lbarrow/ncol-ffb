@@ -24,7 +24,7 @@ export default {
 }
 .standings-mini__item {
   border: 1px solid rgba(white, 0.1);
-  background-color: darken($blue_dark, 5);
+  background-color: rgba(darken($blue_dark, 5), 0.65);
   border-radius: 0.5rem;
   margin-bottom: 0.5rem;
   display: grid;

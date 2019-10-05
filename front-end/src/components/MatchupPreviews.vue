@@ -1,18 +1,20 @@
 <template lang="pug">
   ul.matchup-previews
-    li.matchup-preview(v-for="matchup in matchups")
+    li.matchup-preview(v-for="matchup in matchups" :class="{ 'matchup-preview--expanded': expanded }")
       router-link.matchup-preview__link(:to="'/matchup/' + matchup._id")
         .matchup-preview__player.matchup-preview__player--first
           .matchup-preview__photo(:class="'owner-photo--' + matchup.home")
-          .matchup-preview__name {{ matchup.homeOwner.displayName }}
+          .matchup-preview__name
+            .matchup-preview__display-name {{ matchup.homeOwner.displayName }}
             .matchup-preview__record {{ matchup.homeOwner.wins }}-{{ matchup.homeOwner.losses }}
-          .matchup-preview__points(v-html="teamFantasyPoints(matchup.homeScore)")
+            .matchup-preview__points(v-html="teamFantasyPoints(matchup.homeScore)")
         .matchup-preview__vs vs
         .matchup-preview__player.matchup-preview__player--second
           .matchup-preview__photo(:class="'owner-photo--' + matchup.away")
-          .matchup-preview__name {{ matchup.awayOwner.displayName }}
+          .matchup-preview__name
+            .matchup-preview__display-name {{ matchup.awayOwner.displayName }}
             .matchup-preview__record {{ matchup.awayOwner.wins }}-{{ matchup.awayOwner.losses }}
-          .matchup-preview__points(v-html="teamFantasyPoints(matchup.awayScore)")
+            .matchup-preview__points(v-html="teamFantasyPoints(matchup.awayScore)")
 </template>
 
 <script>
@@ -20,7 +22,11 @@ import scoreFormatter from '@/utility/scoreFormatter'
 export default {
   name: 'MatchupPreviews',
   props: {
-    matchups: Array
+    matchups: Array,
+    expanded: {
+      type: Boolean,
+      default: false
+    }
   },
   methods: {
     teamFantasyPoints(points) {
@@ -31,39 +37,107 @@ export default {
 </script>
 
 <style lang="scss">
-.standings-mini {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.matchup-preview {
 }
-.standings-mini__item {
+.matchup-preview__link {
+  background-color: rgba(darken($blue_dark, 5), 0.65);
   border: 1px solid rgba(white, 0.1);
-  background-color: darken($blue_dark, 5);
   border-radius: 0.5rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
+  color: white;
   display: grid;
-  grid-template-columns: 6rem 1fr auto auto;
-  padding: 1rem;
-  grid-gap: 2rem;
+  grid-template-columns: 1fr auto 1fr;
+  padding: 2rem 1.5rem;
+  text-decoration: none;
+  grid-gap: 1.5rem;
   align-items: center;
+  text-align: center;
+  transition: all 0.2s ease;
+  .matchup-preview--expanded & {
+    grid-gap: 3rem;
+    padding: 2.5rem 2rem;
+  }
+  &:hover {
+    background-color: rgba($blue, 0.15);
+    border-color: rgba($blue, 0.15);
+    box-shadow: 0 8px 12px rgba(black, 0.8);
+    transform: translateY(-0.4rem);
+  }
 }
-.standings-mini__photo {
+.matchup-preview__player {
+  .matchup-preview--expanded & {
+    align-items: center;
+    display: grid;
+    grid-gap: 2rem;
+    grid-template-columns: 8rem 1fr;
+    text-align: left;
+  }
+  .matchup-preview--expanded &.matchup-preview__player--first {
+    grid-template-columns: 1fr 8rem;
+  }
+}
+.matchup-preview__player--second {
+}
+.matchup-preview__photo {
   width: 6rem;
   height: 6rem;
   border-radius: 100%;
+  margin: 0 auto 1rem;
   background-size: contain;
+  .matchup-preview--expanded & {
+    width: 8rem;
+    height: 8rem;
+    margin: 0;
+  }
+  .matchup-preview--expanded .matchup-preview__player--first & {
+    grid-column: 2;
+  }
 }
-.standings-mini__name {
-  font-size: 1.8rem;
-  font-weight: bold;
+.matchup-preview__name {
+  .matchup-preview--expanded .matchup-preview__player--first & {
+    grid-column: 1;
+    grid-row: 1;
+    text-align: right;
+  }
 }
-.standings-mini__record {
-  color: $blue;
-  font-size: 2rem;
+.matchup-preview__display-name {
+  .matchup-preview--expanded & {
+    font-size: 1.8rem;
+    padding-bottom: 0.2rem;
+    line-height: 1.2;
+  }
 }
-.standings-mini__streak {
+.matchup-preview__record {
+  font-size: 1.3rem;
+  font-family: $font_ideal;
+  font-weight: normal;
   opacity: 0.7;
-  font-size: 1.5rem;
-  padding-right: 1rem;
+  .matchup-preview--expanded & {
+    font-size: 1.4rem;
+    padding-bottom: 0.6rem;
+  }
+}
+.matchup-preview__points {
+  font-size: 2.4rem;
+  color: $blue;
+  .matchup-preview--expanded & {
+    font-size: 3rem;
+    line-height: 1;
+  }
+}
+.matchup-preview__vs {
+  font-weight: bold;
+  color: white;
+  opacity: 0.8;
+  align-self: stretch;
+  padding: 1rem;
+  font-size: 2rem;
+  border-left: 1px solid rgba(white, 0.2);
+  border-right: 1px solid rgba(white, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 300;
+  text-transform: uppercase;
 }
 </style>

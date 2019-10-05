@@ -2,14 +2,14 @@
   .matchups
     .matchups__inner
       h2.page-title
-        .page-title__sub Matchups
-        .page-title__main What Does NCOL Stand For?
+        .page-title__sub Schedule
+        .page-title__main Matchups
       .matchups-page
         .league-matchups(v-if="weeks")
           ul.weeks
             li.week(v-for="week in weeks")
-              h3.title Week {{ week._id }} Matchups
-              matchup-previews(:matchups="week.matchups")
+              h3.title Week {{ week._id }}
+              matchup-previews(:matchups="week.matchups" :expanded="true")
 </template>
 
 <script>
@@ -38,6 +38,7 @@ export default {
 }
 .matchups__inner {
 }
-.matchups-page {
+.matchups-page .week {
+  margin-bottom: 5rem;
 }
 </style>

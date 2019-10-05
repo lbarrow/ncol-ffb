@@ -4,8 +4,11 @@
     .matchup-header__title {{ owner.displayName }}
     .matchup-header__total-points(v-html="teamFantasyPoints")
     .matchup-header__status
-      .matchup-header__status-in #[strong !!!] in play
-      .matchup-header__status-to #[strong !!!] to play
+      template(v-if="playersPlaying > 0 && playersLeft > 0")
+        .matchup-header__status-in #[strong {{ playersPlaying }}] in play
+        .matchup-header__status-to #[strong {{ playersLeft }}] to play
+      template(v-else)
+        .matchup-header__status-done all games complete
 </template>
 
 <script>
@@ -14,7 +17,9 @@ export default {
   name: 'MatchupHeader',
   props: {
     owner: Object,
-    total: Number
+    total: Number,
+    playersLeft: Number,
+    playersPlaying: Number
   },
   computed: {
     teamFantasyPoints() {
@@ -26,8 +31,10 @@ export default {
 
 <style lang="scss">
 .matchup-header {
-  background-color: rgba(black, 0.3);
-  border-radius: 0.5rem;
+  background-color: rgba(darken($blue_dark, 5), 0.8);
+  border-bottom: 1px solid rgba(white, 0.15);
+  /* background-color: darken($blue_dark, 5); */
+  border-radius: 0.5rem 0.5rem 0 0;
   padding: 2rem;
   text-align: center;
 }
@@ -63,5 +70,8 @@ export default {
   margin-right: 1rem;
 }
 .matchup-header__status-to {
+}
+.matchup-header__status-done {
+  opacity: 0.5;
 }
 </style>

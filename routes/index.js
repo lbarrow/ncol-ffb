@@ -6,6 +6,7 @@ const apiController = require('../controllers/apiController')
 
 router.get('/setup/schedule', setupController.parseSchedule)
 router.get('/setup/matchups', setupController.setupMatchups)
+router.get('/setup/write-json', setupController.downloadAllFinishedGames)
 router.get('/setup/games', setupController.parseAllGames)
 router.get('/setup/this-week', setupController.parseThisWeek)
 router.get('/setup/teams', setupController.teams)

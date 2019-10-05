@@ -2,12 +2,15 @@
   .matchup-page
     .matchup-page__inner(v-if="matchup")
       h2.page-title
-        .page-title__sub Matchup
-        .page-title__main Week {{matchup.week}}
+        .page-title__sub Week {{matchup.week}}
+        .page-title__main Matchup
     .matchup
-      .matchup-team(v-for="team in teams" :key="team.ownerId")
+      .matchup-team(v-for="team in teams" :key="team.owner.ownerId")
         .matchup-team__header
-          matchup-header(:owner="team.owner" :total="team.teamTotal")
+          matchup-header(:owner="team.owner"
+            :total="team.teamTotal"
+            :playersLeft="playersLeft(team.owner.ownerId)"
+            :playersPlaying="playersPlaying(team.owner.ownerId)")
         ul.matchup-positions
           li.matchup-position(v-for="position in team.positions" :key="position._id")
             h3.matchup-position__title {{position._id}}s
@@ -39,6 +42,22 @@ export default {
     const response = await axios.get(API_URL)
     this.matchup = response.data.matchup
     this.teams = response.data.teams
+  },
+  methods: {
+    isTeamHomeOrAway(ownerId) {
+      console.log('isTeamHomeOrAway', ownerId, this.matchup.away)
+      if (ownerId === this.matchup.away) {
+        return 'away'
+      }
+      return 'home'
+    },
+    playersLeft(ownerId) {
+      console.log('playersLeft', ownerId)
+      return this.matchup[this.isTeamHomeOrAway(ownerId) + 'PlayersLeft']
+    },
+    playersPlaying(ownerId) {
+      return this.matchup[this.isTeamHomeOrAway(ownerId) + 'PlayersPlaying']
+    }
   }
 }
 </script>
@@ -51,15 +70,17 @@ export default {
 }
 .matchup-team {
   border: 1px solid rgba(white, 0.1);
+  border-radius: 0.5rem;
   padding-bottom: 1rem;
 }
 .matchup-team__header {
 }
 .matchup-positions {
+  background-color: rgba(black, 0.35);
   padding: 0 2rem;
 }
 .matchup-position {
-  padding: 2rem 0 1rem;
+  padding: 3rem 0;
   position: relative;
 }
 .matchup-position__title {
@@ -67,11 +88,30 @@ export default {
   font-size: 1.2rem;
   letter-spacing: 0.3rem;
   position: absolute;
-  left: calc(100% + 2.3rem);
-  top: 4.2rem;
+  left: calc(100% + 3rem);
+  top: 1.6rem;
+  padding-top: 2.8rem;
   opacity: 0.75;
   text-align: center;
-  width: 6rem;
+  width: 4.2rem;
+  bottom: 1rem;
+  border-top: 0.2rem solid rgba($blue, 0.6);
+  border-bottom: 0.2rem solid rgba($blue, 0.6);
+  &::before,
+  &::after {
+    background: rgba($blue, 0.4);
+    content: '';
+    position: absolute;
+    height: 1.8rem;
+    left: calc(50% - 0.05rem);
+    top: 0;
+    width: 0.1rem;
+  }
+  &::after {
+    top: 5.4rem;
+    height: auto;
+    bottom: 0;
+  }
 }
 .matchup-team:last-child {
   .matchup-position__title {

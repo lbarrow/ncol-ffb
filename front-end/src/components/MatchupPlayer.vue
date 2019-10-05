@@ -86,14 +86,20 @@ export default {
         return `vs ${this.opponentAbbr}, ${gameTime}`
       } else if (game.quarter === 'Final') {
         if (this.player.teamAbbr === game.visitorTeamAbbr) {
-          const gameResult = this.gameResult(game.visitorScore, game.homeScore)
-          return `${gameResult} ${game.visitorScore}-${game.homeScore} at ${this.opponentAbbr}`
+          const gameResult = this.gameResult(
+            game.awayTeam.score.current,
+            game.homeTeam.score.current
+          )
+          return `${gameResult} ${game.awayTeam.score.current}-${game.homeTeam.score.current} at ${this.opponentAbbr}`
         }
-        const gameResult = this.gameResult(game.homeScore, game.visitorScore)
-        return `${gameResult} ${game.homeScore}-${game.visitorScore} vs ${this.opponentAbbr}`
+        const gameResult = this.gameResult(
+          game.homeTeam.score.current,
+          game.awayTeam.score.current
+        )
+        return `${gameResult} ${game.homeTeam.score.current}-${game.awayTeam.score.current} vs ${this.opponentAbbr}`
       }
       console.log('game', { game })
-      const score = `${game.homeTeamAbbr} ${game.homeScore} @ ${game.visitorTeamAbbr} ${game.visitorScore}`
+      const score = `${game.homeTeamAbbr} ${game.homeTeam.score.current} @ ${game.visitorTeamAbbr} ${game.awayTeam.score.current}`
       return `${score} • ${this.formatQuarter(game.quarter)} ${game.clock}`
     }
   },

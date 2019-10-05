@@ -1,5 +1,6 @@
 const axios = require('axios')
 const mongoose = require('mongoose')
+const fs = require('fs')
 const path = require('path')
 const moment = require('moment')
 const downloadImage = require('../utility/downloadImage')
@@ -15,8 +16,8 @@ const Owner = mongoose.model('Owner')
 
 // store all teams in db
 exports.parseSchedule = async (req, res) => {
-  // const scheduleURL = 'http://www.nfl.com/feeds-rs/schedules/2019'
-  const scheduleURL = 'http://localhost:4444/schedule.xml'
+  const scheduleURL = 'http://www.nfl.com/feeds-rs/schedules/2019'
+  // const scheduleURL = 'http://localhost:4444/schedule.xml'
   const response = await axios({
     method: 'get',
     url: scheduleURL,
@@ -38,17 +39,21 @@ exports.parseSchedule = async (req, res) => {
       gameTimeEastern: item._attributes.gameTimeEastern,
       gameTimeLocal: item._attributes.gameTimeLocal,
       isoTime: new Date(item._attributes.isoTime),
-      homeTeamId: item._attributes.homeTeamId,
-      visitorTeamId: item._attributes.visitorTeamId,
-      homeTeamAbbr: item._attributes.homeTeamAbbr,
-      visitorTeamAbbr: item._attributes.visitorTeamAbbr,
-      homeDisplayName: item._attributes.homeDisplayName,
-      visitorDisplayName: item._attributes.visitorDisplayName,
-      homeNickname: item._attributes.homeNickname,
-      visitorNickname: item._attributes.visitorNickname,
       gameType: item._attributes.gameType,
       weekNameAbbr: item._attributes.weekNameAbbr,
-      weekName: item._attributes.weekName
+      weekName: item._attributes.weekName,
+      homeTeam: {
+        teamId: item._attributes.homeTeamId,
+        teamAbbr: item._attributes.homeTeamAbbr,
+        displayName: item._attributes.homeDisplayName,
+        nickname: item._attributes.homeNickname
+      },
+      awayTeam: {
+        teamId: item._attributes.visitorTeamId,
+        teamAbbr: item._attributes.visitorTeamAbbr,
+        displayName: item._attributes.visitorDisplayName,
+        nickname: item._attributes.visitorNickname
+      }
     }
   })
 
@@ -127,6 +132,43 @@ exports.updateOwnerRecord = async (req, res) => {
   res.send(`${owners.length} owners records set`)
 }
 
+const writeFilePromised = (path, data, opts = 'utf8') =>
+  new Promise((resolve, reject) => {
+    fs.writeFileSync(path, data, opts, err => {
+      if (err) {
+        console.log('err', { err })
+        reject(err)
+      } else resolve()
+    })
+  })
+
+exports.downloadAllFinishedGames = async (req, res) => {
+  // then get the games that are marked as final (and are this season)
+  const games = await Game.find({
+    quarter: 'Final',
+    seasonType: 'REG',
+    season: 2019
+  })
+
+  // loop through the games, getting json from NFL and writing it to /gamedata
+  for (let i = 0; i < games.length; i++) {
+    const gameId = games[i].gameId
+    const gameResponse = await axios.get(
+      `http://www.nfl.com/liveupdate/game-center/${gameId}/${gameId}_gtd.json`
+    )
+    const data = JSON.stringify(gameResponse.data, null, 2)
+    fs.writeFile(`./gamedata/${gameId}.json`, data, err => {
+      if (err) {
+        console.error(err)
+        return
+      }
+      console.log('wrote' + gameId + '.json')
+    })
+  }
+
+  res.send(`downloaded ${games.length} games`)
+}
+
 exports.parseAllGames = async (req, res) => {
   // get the games from the start of the season until now
   const games = await Game.find({
@@ -139,10 +181,11 @@ exports.parseAllGames = async (req, res) => {
 
   // parse them all
   let statlinesCount = 0
-  // statlinesCount += await parseGame(games[10])
   for (let i = 0; i < games.length; i++) {
     statlinesCount += await parseGame(games[i])
-    console.log(`${games[i].visitorTeamAbbr} @ ${games[i].homeTeamAbbr} parsed`)
+    console.log(
+      `${games[i].awayTeam.teamAbbr} @ ${games[i].homeTeam.teamAbbr} parsed`
+    )
   }
 
   const week = getCurrentWeek.getCurrentWeek()
@@ -173,7 +216,9 @@ exports.parseThisWeek = async (req, res) => {
   let statlinesCount = 0
   for (let i = 0; i < games.length; i++) {
     statlinesCount += await parseGame(games[i])
-    console.log(`${games[i].visitorTeamAbbr} @ ${games[i].homeTeamAbbr} parsed`)
+    console.log(
+      `${games[i].awayTeam.teamAbbr} @ ${games[i].homeTeam.teamAbbr} parsed`
+    )
   }
 
   await updateFantasyPointsForMatchups(week)
@@ -187,8 +232,16 @@ exports.parseThisWeek = async (req, res) => {
 updateFantasyPointsForMatchups = async week => {
   const matchups = await Matchup.find({ week })
   for (let i = 0; i < matchups.length; i++) {
-    matchups[i].homeScore = await totalPointsForTeamWeek(matchups[i].home, week)
-    matchups[i].awayScore = await totalPointsForTeamWeek(matchups[i].away, week)
+    const homeResults = await totalPointsForTeamWeek(matchups[i].home, week)
+    matchups[i].homeScore = homeResults.score
+    matchups[i].homePlayersLeft = homeResults.playersLeft
+    matchups[i].homePlayersPlaying = homeResults.playersPlaying
+    matchups[i].homePlayersDone = homeResults.playersDone
+    const awayResults = await totalPointsForTeamWeek(matchups[i].away, week)
+    matchups[i].awayScore = awayResults.score
+    matchups[i].awayPlayersLeft = awayResults.playersLeft
+    matchups[i].awayPlayersPlaying = awayResults.playersPlaying
+    matchups[i].awayPlayersDone = awayResults.playersDone
     await matchups[i].save()
   }
 }
@@ -202,6 +255,9 @@ function markBestPlayers(bestSpots, players) {
 }
 
 totalPointsForTeamWeek = async (fantasyTeamId, week) => {
+  let playersLeft = 0
+  let playersPlaying = 0
+  let playersDone = 0
   let positions = await Player.aggregate([
     {
       $match: {
@@ -281,11 +337,26 @@ totalPointsForTeamWeek = async (fantasyTeamId, week) => {
   // move fantasy points to player level
   positions = positions.map(position => {
     position.players.map(player => {
+      // setup players fantasy points
       let fantasyPoints = 0.0
       if (player.statline) {
         fantasyPoints = player.statline.fantasyPoints
       }
       player.fantasyPoints = Math.round(fantasyPoints * 100) / 100
+
+      // determine if player yet to play, played or playing now
+      // if no game, player on bye
+      if (player.game) {
+        if (!player.game.quarter) {
+          ++playersLeft // if no quarter, game hasn't started
+        } else {
+          if (player.game.quarter === 'Final') {
+            ++playersDone
+          } else {
+            ++playersPlaying
+          }
+        }
+      }
       return player
     })
 
@@ -328,7 +399,12 @@ totalPointsForTeamWeek = async (fantasyTeamId, week) => {
       }
     }
   }
-  return Math.round(teamTotal * 100) / 100
+  return {
+    score: Math.round(teamTotal * 100) / 100,
+    playersLeft,
+    playersPlaying,
+    playersDone
+  }
 }
 
 parseGame = async game => {
@@ -348,8 +424,42 @@ parseGame = async game => {
   game.clock = gameStatsData.clock
   game.possessingTeamAbbr = gameStatsData.posteam
   game.redzone = gameStatsData.redzone
-  game.homeScore = gameStatsData.home.score.T
-  game.visitorScore = gameStatsData.away.score.T
+  game.homeTeam.timeouts = gameStatsData.home.to
+  game.homeTeam.score.quarter1 = gameStatsData.home.score['1']
+  game.homeTeam.score.quarter2 = gameStatsData.home.score['2']
+  game.homeTeam.score.quarter3 = gameStatsData.home.score['3']
+  game.homeTeam.score.quarter4 = gameStatsData.home.score['4']
+  game.homeTeam.score.overtime = gameStatsData.home.score['5']
+  game.homeTeam.score.current = gameStatsData.home.score['T']
+  game.homeTeam.totalFirstDowns = gameStatsData.home.stats.team.totfd
+  game.homeTeam.totalYards = gameStatsData.home.stats.team.totyds
+  game.homeTeam.passingYards = gameStatsData.home.stats.team.pyrds
+  game.homeTeam.receivingYards = gameStatsData.home.stats.team.ryrds
+  game.homeTeam.penalties = gameStatsData.home.stats.team.pen
+  game.homeTeam.penaltyYards = gameStatsData.home.stats.team.penyds
+  game.homeTeam.turnovers = gameStatsData.home.stats.team.trnovr
+  game.homeTeam.punt = gameStatsData.home.stats.team.pt
+  game.homeTeam.puntyds = gameStatsData.home.stats.team.ptyds
+  game.homeTeam.puntavg = gameStatsData.home.stats.team.ptavg
+  game.homeTeam.timeOfPossession = gameStatsData.home.stats.team.top
+  game.awayTeam.timeouts = gameStatsData.away.to
+  game.awayTeam.score.quarter1 = gameStatsData.away.score['1']
+  game.awayTeam.score.quarter2 = gameStatsData.away.score['2']
+  game.awayTeam.score.quarter3 = gameStatsData.away.score['3']
+  game.awayTeam.score.quarter4 = gameStatsData.away.score['4']
+  game.awayTeam.score.overtime = gameStatsData.away.score['5']
+  game.awayTeam.score.current = gameStatsData.away.score['T']
+  game.awayTeam.totalFirstDowns = gameStatsData.away.stats.team.totfd
+  game.awayTeam.totalYards = gameStatsData.away.stats.team.totyds
+  game.awayTeam.passingYards = gameStatsData.away.stats.team.pyrds
+  game.awayTeam.receivingYards = gameStatsData.away.stats.team.ryrds
+  game.awayTeam.penalties = gameStatsData.away.stats.team.pen
+  game.awayTeam.penaltyYards = gameStatsData.away.stats.team.penyds
+  game.awayTeam.turnovers = gameStatsData.away.stats.team.trnovr
+  game.awayTeam.punt = gameStatsData.away.stats.team.pt
+  game.awayTeam.puntyds = gameStatsData.away.stats.team.ptyds
+  game.awayTeam.puntavg = gameStatsData.away.stats.team.ptavg
+  game.awayTeam.timeOfPossession = gameStatsData.away.stats.team.top
   game.save()
 
   const teamAbbr = gameStatsData.home.abbr

@@ -6,8 +6,14 @@ const matchupSchema = new mongoose.Schema(
     week: Number,
     home: String,
     homeScore: Number,
+    homePlayersLeft: Number,
+    homePlayersPlaying: Number,
+    homePlayersDone: Number,
     away: String,
-    awayScore: Number
+    awayScore: Number,
+    awayPlayersLeft: Number,
+    awayPlayersPlaying: Number,
+    awayPlayersDone: Number
   },
   {
     toJSON: { virtuals: true },

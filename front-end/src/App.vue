@@ -12,8 +12,49 @@
 </template>
 
 <style lang="scss">
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+body,
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol,
+li,
+figure,
+figcaption,
+blockquote,
+dl,
+dd {
+  margin: 0;
+  padding: 0;
+}
+body {
+  min-height: 100vh;
+  scroll-behavior: smooth;
+  text-rendering: optimizeSpeed;
+  line-height: 1.5;
+}
+ul[class],
+ol[class] {
+  list-style: none;
+}
+a:not([class]) {
+  text-decoration-skip-ink: auto;
+}
+img {
+  max-width: 100%;
+  display: block;
+}
 html {
-  background-color: $blue_dark;
+  background: $blue_dark url(/graphics/bg.jpg);
+  background-size: contain;
+  background-repeat: no-repeat;
   color: white;
   font: 62.5%/1.5 $font_ringside;
   font-weight: 400;
@@ -23,37 +64,18 @@ html {
   -webkit-font-feature-settings: 'lnum';
   font-feature-settings: 'lnum';
 }
-body {
-  margin: 0;
-}
 img {
   max-width: 100%;
-}
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  margin: 0;
-  font-size: 2rem;
 }
 a {
   font-weight: bold;
   color: $green;
 }
-ul {
+ul,
+ol {
   list-style: none;
-  margin: 0;
-  padding: 0;
-}
-li {
-  margin: 0;
 }
 
-.app {
-  display: grid;
-}
 .header {
   background: $green;
   display: grid;
@@ -99,9 +121,16 @@ li {
     }
   }
 }
+
 .main {
   font-size: 1.5rem;
+  margin: 0 auto;
+  max-width: 96rem;
+  width: 100%;
   padding: 4rem;
+  @media (min-width: 60em) {
+    padding: 6rem;
+  }
 }
 
 .page-title {
@@ -110,7 +139,7 @@ li {
   margin: 0 0 2.5rem;
 }
 .page-title__main {
-  color: $blue;
+  color: $green;
   font-weight: normal;
 }
 .page-title__sub {
