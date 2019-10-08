@@ -4,6 +4,8 @@
       h2.page-title
         .page-title__sub Week {{matchup.week}}
         .page-title__main Matchup
+      //- .change-messages
+      //-   div(v-for="message in changeMessages") {{ message }}
     .matchup
       .matchup-team(v-for="team in teams" :key="team.owner.ownerId")
         .matchup-team__header
@@ -16,8 +18,8 @@
             h3.matchup-position__title {{position._id}}s
             ul.matchup-players
               li.matchup-players__item(v-for="index in position.playerRowsToRender")
-                  matchup-player(v-if="position.players[index - 1]" :player="position.players[index - 1]")
-                  matchup-player(v-else :spacer="true")
+                matchup-player(v-if="position.players[index - 1]" :player="position.players[index - 1]" v-on:player-change="showPlayerChangeMessage")
+                matchup-player(v-else :spacer="true")
 </template>
 
 <script>
@@ -34,25 +36,37 @@ export default {
   data() {
     return {
       matchup: {},
-      teams: []
+      teams: [],
+      changeMessages: [],
+      updateIntervalId: undefined
     }
   },
   async mounted() {
-    const API_URL = `http://localhost:4444/matchup/${this.$route.params.id}`
-    const response = await axios.get(API_URL)
-    this.matchup = response.data.matchup
-    this.teams = response.data.teams
+    this.checkForUpdatedData()
+    this.updateIntervalId = setInterval(async () => {
+      await this.checkForUpdatedData()
+    }, 5000)
+  },
+  beforeDestroy() {
+    clearInterval(this.updateIntervalId)
   },
   methods: {
+    async checkForUpdatedData() {
+      const API_URL = `http://localhost:4444/matchup/${this.$route.params.id}`
+      const response = await axios.get(API_URL)
+      this.matchup = response.data.matchup
+      this.teams = response.data.teams
+    },
+    showPlayerChangeMessage(changeMessage) {
+      this.changeMessages.unshift(changeMessage)
+    },
     isTeamHomeOrAway(ownerId) {
-      console.log('isTeamHomeOrAway', ownerId, this.matchup.away)
       if (ownerId === this.matchup.away) {
         return 'away'
       }
       return 'home'
     },
     playersLeft(ownerId) {
-      console.log('playersLeft', ownerId)
       return this.matchup[this.isTeamHomeOrAway(ownerId) + 'PlayersLeft']
     },
     playersPlaying(ownerId) {

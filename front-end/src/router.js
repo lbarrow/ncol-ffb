@@ -14,6 +14,12 @@ export default new Router({
       component: League
     },
     {
+      path: '/standings/',
+      name: 'standings',
+      component: () =>
+        import(/* webpackChunkName: "standings" */ './views/Standings.vue')
+    },
+    {
       path: '/matchups/',
       name: 'matchups',
       component: () =>

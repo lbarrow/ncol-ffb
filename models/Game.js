@@ -134,64 +134,6 @@ const gameTeamStatsSchema = new mongoose.Schema({
       interceptions: Number,
       forcedFumbles: Number
     }
-  ],
-  punting: [
-    {
-      gsisId: String,
-      nameAbbr: String,
-      punts: Number,
-      yards: Number,
-      average: Number,
-      recoveredWithinThe20: Number,
-      long: Number
-    }
-  ],
-  scores: [
-    {
-      type: String,
-      description: String,
-      quarter: Number,
-      yards: Number,
-      teamAbbr: String
-    }
-  ],
-  drives: [
-    {
-      possessingTeamAbbr: String,
-      quarter: Number,
-      redzone: Boolean,
-      firstDowns: Number,
-      result: String,
-      penaltyYards: Number,
-      yardsGained: Number,
-      numberOfPlays: Number,
-      possessionTime: String,
-      start: {
-        quarter: Number,
-        time: String,
-        yardline: String,
-        teamAbbr: String
-      },
-      end: {
-        quarter: Number,
-        time: String,
-        yardline: String,
-        teamAbbr: String
-      },
-      plays: [
-        {
-          quarter: Number,
-          down: Number,
-          time: String,
-          yardline: String,
-          yardsToGo: Number,
-          netYards: Number,
-          possessingTeamAbbr: String,
-          description: String,
-          note: String
-        }
-      ]
-    }
   ]
 })
 
@@ -218,7 +160,53 @@ const gameSchema = new mongoose.Schema(
     possessingTeamAbbr: String,
     redzone: Boolean,
     homeTeam: gameTeamStatsSchema,
-    awayTeam: gameTeamStatsSchema
+    awayTeam: gameTeamStatsSchema,
+    scoreSummaries: [
+      {
+        scoringType: String,
+        description: String,
+        quarter: Number,
+        teamAbbr: String
+      }
+    ],
+    drives: [
+      {
+        possessingTeamAbbr: String,
+        quarter: Number,
+        redzone: Boolean,
+        firstDowns: Number,
+        result: String,
+        penaltyYards: Number,
+        yardsGained: Number,
+        numberOfPlays: Number,
+        possessionTime: String,
+        start: {
+          quarter: Number,
+          time: String,
+          yardline: String,
+          teamAbbr: String
+        },
+        end: {
+          quarter: Number,
+          time: String,
+          yardline: String,
+          teamAbbr: String
+        },
+        plays: [
+          {
+            quarter: Number,
+            down: Number,
+            time: String,
+            yardline: String,
+            yardsToGo: Number,
+            netYards: Number,
+            possessingTeamAbbr: String,
+            description: String,
+            note: String
+          }
+        ]
+      }
+    ]
   },
   {
     toJSON: { virtuals: true },

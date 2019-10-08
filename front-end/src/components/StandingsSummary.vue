@@ -4,7 +4,7 @@
       .standings-mini__photo(:class="'owner-photo--' + team.ownerId")
       .standings-mini__name {{ team.displayName }}
       .standings-mini__record {{team.wins}}-{{team.losses}}
-      .standings-mini__streak W3
+      .standings-mini__streak {{team.streak}}
 </template>
 
 <script>

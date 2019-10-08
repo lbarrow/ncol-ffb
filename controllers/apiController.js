@@ -8,7 +8,6 @@ const Owner = mongoose.model('Owner')
 
 exports.index = async (req, res) => {
   const week = getCurrentWeek.getCurrentWeek()
-  // const matchups = await Matchup.find({ week: { $eq: week } })
   const matchups = await Matchup.aggregate([
     {
       $match: { week }
@@ -42,9 +41,15 @@ exports.index = async (req, res) => {
   res.send(JSON.stringify(data, null, 4))
 }
 
+exports.standings = async (req, res) => {
+  const teams = await Owner.find().sort({ wins: 'desc' })
+
+  res.header('Content-Type', 'application/json')
+  res.send(JSON.stringify(teams, null, 4))
+}
+
 exports.matchups = async (req, res) => {
   const week = getCurrentWeek.getCurrentWeek()
-  // const matchups = await Matchup.find({ week: { $eq: week } })
   const matchups = await Matchup.aggregate([
     {
       $match: { week: { $lte: week } }
@@ -196,8 +201,8 @@ const calculateFantasyPoints = async (week, fantasyTeamId) => {
             $match: {
               $expr: {
                 $or: [
-                  { $eq: ['$homeTeamId', '$$teamId'] },
-                  { $eq: ['$visitorTeamId', '$$teamId'] }
+                  { $eq: ['$homeTeam.teamId', '$$teamId'] },
+                  { $eq: ['$awayTeam.teamId', '$$teamId'] }
                 ]
               },
               week: week

@@ -46,11 +46,33 @@ export default {
       default: false
     }
   },
+  watch: {
+    player(a, b) {
+      if (a.fantasyPoints != b.fantasyPoints) {
+        const changeMessage = `${
+          this.player.displayName
+        } points changed ${a.fantasyPoints - b.fantasyPoints}`
+        this.$emit('player-change', changeMessage)
+      }
+    }
+  },
   computed: {
     playerClasses() {
+      let isPlaying = false
+      if (this.player.game) {
+        if (this.player.game.quarter) {
+          if (
+            this.player.game.quarter !== 'Final' &&
+            this.player.game.quarter !== 'final overtime'
+          ) {
+            isPlaying = true
+          }
+        }
+      }
       return {
         'matchup-player--DST': this.player.position === 'DST',
-        'matchup-player--best': this.player.best && this.player.fantasyPoints
+        'matchup-player--best': this.player.best && this.player.fantasyPoints,
+        'matchup-player--playing': isPlaying
       }
     },
     playerImageURL() {
@@ -60,10 +82,10 @@ export default {
       return `http://localhost:4444/graphics/players/${this.player.esbId}.png`
     },
     opponentAbbr() {
-      if (this.player.teamAbbr === this.player.game.visitorTeamAbbr) {
-        return this.player.game.homeTeamAbbr
+      if (this.player.teamAbbr === this.player.game.awayTeam.teamAbbr) {
+        return this.player.game.homeTeam.teamAbbr
       }
-      return this.player.game.visitorTeamAbbr
+      return this.player.game.awayTeam.teamAbbr
     },
     playerFantasyPoints() {
       if (this.player.fantasyPoints) {
@@ -80,12 +102,15 @@ export default {
       const game = this.player.game
       const gameTime = moment(this.player.game.isoTime).format('ddd h:mm A')
       if (!game.quarter) {
-        if (this.player.teamAbbr === game.visitorTeamAbbr) {
+        if (this.player.teamAbbr === game.awayTeam.teamAbbr) {
           return `at ${this.opponentAbbr}, ${gameTime}`
         }
         return `vs ${this.opponentAbbr}, ${gameTime}`
-      } else if (game.quarter === 'Final') {
-        if (this.player.teamAbbr === game.visitorTeamAbbr) {
+      } else if (
+        game.quarter === 'Final' ||
+        game.quarter === 'final overtime'
+      ) {
+        if (this.player.teamAbbr === game.awayTeam.teamAbbr) {
           const gameResult = this.gameResult(
             game.awayTeam.score.current,
             game.homeTeam.score.current
@@ -98,8 +123,7 @@ export default {
         )
         return `${gameResult} ${game.homeTeam.score.current}-${game.awayTeam.score.current} vs ${this.opponentAbbr}`
       }
-      console.log('game', { game })
-      const score = `${game.homeTeamAbbr} ${game.homeTeam.score.current} @ ${game.visitorTeamAbbr} ${game.awayTeam.score.current}`
+      const score = `${game.homeTeam.teamAbbr} ${game.homeTeam.score.current} @ ${game.awayTeam.teamAbbr} ${game.awayTeam.score.current}`
       return `${score} • ${this.formatQuarter(game.quarter)} ${game.clock}`
     }
   },
@@ -132,18 +156,18 @@ export default {
 
 <style lang="scss">
 .matchup-player {
-  background-color: lighten($blue_dark, 3);
   padding: 0.5rem 1.5rem 0.5rem 1rem;
   border-radius: 0.5rem;
+  border: 1px solid transparent;
   min-height: 5rem;
   display: grid;
   grid-template-columns: 4rem 1fr auto;
+  background-color: darken($blue_dark, 7);
   align-items: center;
-  opacity: 0.5;
+  position: relative;
 }
 .matchup-player--best {
-  opacity: 1;
-  position: relative;
+  background-color: lighten($blue_dark, 3);
   &::before {
     content: '';
     width: 0;
@@ -155,6 +179,25 @@ export default {
     background-size: contain;
     height: 1.5rem;
     width: 1.5rem;
+  }
+}
+.matchup-player--playing {
+  border-color: rgba($blue, 0.5);
+  &::after {
+    background-color: $blue;
+    content: '';
+    position: absolute;
+    opacity: 1;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 7.2rem;
+    border-radius: 0 0.5rem 0.5rem 0;
+  }
+  .matchup-player__points {
+    color: $blue_dark;
+    position: relative;
+    z-index: 1;
   }
 }
 .matchup-player--spacer {

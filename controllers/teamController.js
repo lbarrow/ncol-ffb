@@ -14,8 +14,8 @@ exports.nflSchedule = async (req, res) => {
             week: '$week',
             home: '$home',
             gameId: '$gameId',
-            visitorDisplayName: '$visitorDisplayName',
-            homeDisplayName: '$homeDisplayName',
+            visitorDisplayName: '$awayTeam.displayName',
+            homeDisplayName: '$homeTeam.displayName',
             gameDate: '$gameDate',
             isoTime: '$isoTime'
           }

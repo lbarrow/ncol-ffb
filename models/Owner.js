@@ -7,7 +7,10 @@ const ownerSchema = new mongoose.Schema(
     displayName: String,
     wins: Number,
     losses: Number,
-    streak: String
+    pointsFor: Number,
+    pointsAgainst: Number,
+    streak: String,
+    resultHistory: [String]
   },
   {
     toJSON: { virtuals: true },

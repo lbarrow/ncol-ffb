@@ -5,31 +5,18 @@
   h2 Home
   h3 Setup
   ul
-    li: a(href="/setup/this-week") Parse This Week
-    li: a(href="/setup/games") Parse All Games
-    li: a(href="/setup/matchups") Seed Matchups
     li: a(href="/setup/schedule") Seed NFL Schedule
-    li: a(href="/setup/teams") Seed All Teams
-    li: a(href="/setup/rosters") Seed All Players
-    li: a(href="/setup/photos") Download All Photos
-    li: a(href="/setup/fantasy-teams") Set Owners on Players
+    li: a(href="/setup/games") Parse All Completed Games (gets json from nfl.com)
+    li: a(href="/setup/this-week") Parse This Week
+    li: a(href="/setup/matchups") Seed Fantasy Matchups
+    li: a(href="/setup/fantasy-teams") Seed Fantasy Teams and set Players to Fantasy Teams
+    li: a(href="/setup/update-records") Update Fantasy Team Records
+    li: a(href="/setup/teams") Seed All NFL Teams
+    li: a(href="/setup/rosters") Seed All NFL Players
+    li: a(href="/setup/photos") Download All NFL Player Photos
 
   h3 Views
   ul
     li: a(href="/nfl-schedule") Show NFL Schedule
     li: a(href="/stats") Show All Player Stats
     li: a(href="/teams") Show NFL Teams
-
-  h3 Matchups
-  ul
-  each matchup in matchups
-    li
-      strong WEEK #{matchup.week}
-      br
-      a(href=`/fantasyTeam/${matchup.home}/${matchup.week}`) #{matchup.home}
-      span &nbsp;vs&nbsp;
-      a(href=`/fantasyTeam/${matchup.away}/${matchup.week}`) #{matchup.away}
-      br
-      a(href=`/matchup/${matchup._id}`) view matchup
-      br
-      br

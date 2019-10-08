@@ -4,11 +4,11 @@
     .matchup-header__title {{ owner.displayName }}
     .matchup-header__total-points(v-html="teamFantasyPoints")
     .matchup-header__status
-      template(v-if="playersPlaying > 0 && playersLeft > 0")
-        .matchup-header__status-in #[strong {{ playersPlaying }}] in play
-        .matchup-header__status-to #[strong {{ playersLeft }}] to play
-      template(v-else)
+      template(v-if="playersPlaying == 0 && playersLeft == 0")
         .matchup-header__status-done all games complete
+      template(v-else)
+        .matchup-header__status-in #[strong {{ playersPlaying }}] playing
+        .matchup-header__status-to #[strong {{ playersLeft }}] to play
 </template>
 
 <script>
