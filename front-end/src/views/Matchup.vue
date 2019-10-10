@@ -52,7 +52,7 @@ export default {
   },
   methods: {
     async checkForUpdatedData() {
-      const API_URL = `http://localhost:4444/matchup/${this.$route.params.id}`
+      const API_URL = `/api/matchup/${this.$route.params.id}`
       const response = await axios.get(API_URL)
       this.matchup = response.data.matchup
       this.teams = response.data.teams

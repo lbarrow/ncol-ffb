@@ -8,5 +8,6 @@ module.exports = {
   },
   devServer: {
     public: 'localhost'
-  }
+  },
+  outputDir: '../public/'
 }

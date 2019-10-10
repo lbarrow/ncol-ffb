@@ -27,7 +27,7 @@ export default {
     }
   },
   async mounted() {
-    const result = await axios.get('http://localhost:4444/matchups/')
+    const result = await axios.get('/api/matchups/')
     this.weeks = result.data
   }
 }

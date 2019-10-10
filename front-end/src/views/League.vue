@@ -38,7 +38,7 @@ export default {
   async mounted() {
     const {
       data: { teams, week, matchups }
-    } = await axios.get('http://localhost:4444/')
+    } = await axios.get('/api/')
     this.teams = teams
     this.week = week
     this.matchups = matchups

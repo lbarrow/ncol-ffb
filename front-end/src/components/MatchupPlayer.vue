@@ -88,7 +88,7 @@ export default {
       if (this.player.position === 'DST') {
         return '/graphics/logos/' + this.player.teamAbbr + '.svg'
       }
-      return `http://localhost:4444/graphics/players/${this.player.esbId}.png`
+      return `/graphics/players/${this.player.esbId}.png`
     },
     opponentAbbr() {
       if (this.player.teamAbbr === this.player.game.awayTeam.teamAbbr) {

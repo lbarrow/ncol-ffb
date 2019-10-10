@@ -21,11 +21,11 @@
               .standings-expanded__team-content
                 .standings-expanded__photo(:class="'owner-photo--' + team.ownerId")
                 .standings-expanded__name {{ team.displayName }}
-            td(data-cell-label="Record").standings-expanded__record {{ team.wins }}-{{ team.losses }}
-            td(data-cell-label="Points For").standings-expanded__amount(v-html="formatScore(team.pointsFor)")
-            td(data-cell-label="Points Against").standings-expanded__amount(v-html="formatScore(team.pointsAgainst)")
-            td(data-cell-label="Streak").standings-expanded__streak {{ team.streak }}
-            td(data-cell-label="History").standings-expanded__history
+            td.standings-expanded__record(data-cell-label="Record") {{ team.wins }}-{{ team.losses }}
+            td.standings-expanded__amount(data-cell-label="Points For" v-html="formatScore(team.pointsFor)")
+            td.standings-expanded__amount(data-cell-label="Points Against" v-html="formatScore(team.pointsAgainst)")
+            td.standings-expanded__streak(data-cell-label="Streak") {{ team.streak }}
+            td.standings-expanded__history(data-cell-label="History")
               .standings-expanded__history-content
                 span.standings-expanded__result(v-for="result in team.resultHistory" :class="'standings-expanded__result--' + result") {{ result }}
 </template>
@@ -40,7 +40,7 @@ export default {
     return { teams: [] }
   },
   async mounted() {
-    const result = await axios.get('http://localhost:4444/standings/')
+    const result = await axios.get('/api/standings/')
     this.teams = result.data
   },
   methods: {

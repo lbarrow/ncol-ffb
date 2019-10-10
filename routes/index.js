@@ -1,8 +1,12 @@
 const express = require('express')
 const router = express.Router()
+// const teamController = require('../controllers/teamController')
 const setupController = require('../controllers/setupController')
-const teamController = require('../controllers/teamController')
 const apiController = require('../controllers/apiController')
+const mainController = require('../controllers/mainController')
+
+router.get('/', mainController.index)
+router.get('/test/', mainController.index)
 
 router.get('/setup/', setupController.index)
 router.get('/setup/schedule', setupController.parseSchedule)
@@ -17,15 +21,15 @@ router.get('/setup/fantasy-teams', setupController.setupFantasyTeams)
 router.get('/setup/update-records', setupController.updateFantasyTeamRecords)
 router.get('/setup/update-matchups', setupController.onlyUpdateMatchups)
 
-router.get('/nfl-schedule', teamController.nflSchedule)
-router.get('/stats', teamController.stats)
-router.get('/teams', teamController.teams)
-router.get('/team/:abbr', teamController.teamDetail)
-router.get('/player/:id', teamController.playerDetail)
+// router.get('/team/nfl-schedule', teamController.nflSchedule)
+// router.get('/team/stats', teamController.stats)
+// router.get('/teams/', teamController.teams)
+// router.get('/team/:abbr', teamController.teamDetail)
+// router.get('/team/player/:id', teamController.playerDetail)
 
-router.get('/', apiController.index)
-router.get('/standings/', apiController.standings)
-router.get('/matchups/', apiController.matchups)
-router.get('/matchup/:id/', apiController.matchupDetail)
+router.get('/api/', apiController.index)
+router.get('/api/standings/', apiController.standings)
+router.get('/api/matchups/', apiController.matchups)
+router.get('/api/matchup/:id/', apiController.matchupDetail)
 
 module.exports = router
