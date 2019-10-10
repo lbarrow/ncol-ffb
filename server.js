@@ -7,7 +7,10 @@ require('dotenv').config({ path: 'variables.env' })
 // mongoose.connect('mongodb://localhost/nfldb', { useNewUrlParser: true })
 mongoose.connect(
   `mongodb://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@ds331548.mlab.com:31548/ncolffb`,
-  { useNewUrlParser: true }
+  { useNewUrlParser: true },
+  function(error) {
+    console.log('hi, we connected to mongo')
+  }
 )
 mongoose.Promise = global.Promise // Tell Mongoose to use ES6 promises
 mongoose.connection.on('error', err => {
