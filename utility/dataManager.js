@@ -21,6 +21,7 @@ exports.updateFantasyPointsForMatchups = async (startWeek, endWeek) => {
       matchups[i].awayPlayersDone = awayResults.playersDone
       await matchups[i].save()
     }
+    console.log('completed updating matchups for week ' + week)
   }
 }
 
@@ -434,60 +435,60 @@ exports.updateStatsForGameFromNFL = async game => {
     }
   }
 
-  const driveSummaries = gameStatsData.drives
-  if (driveSummaries) {
-    game.drives = []
-    for (const driveId in driveSummaries) {
-      if (driveId !== 'crntdrv') {
-        if (driveSummaries.hasOwnProperty(driveId)) {
-          let driveSummary = driveSummaries[driveId]
-          let plays = []
-          const playList = driveSummary.plays
-          for (const playId in playList) {
-            if (playList.hasOwnProperty(playId)) {
-              let play = playList[playId]
-              plays.push({
-                quarter: play.qtr,
-                down: play.down,
-                time: play.time,
-                yardline: play.yrdln,
-                yardsToGo: play.ydstogo,
-                netYards: play.ydsnet,
-                possessingTeamAbbr: play.posteam,
-                description: play.desc,
-                note: play.note
-              })
-            }
-          }
+  // const driveSummaries = gameStatsData.drives
+  // if (driveSummaries) {
+  //   game.drives = []
+  //   for (const driveId in driveSummaries) {
+  //     if (driveId !== 'crntdrv') {
+  //       if (driveSummaries.hasOwnProperty(driveId)) {
+  //         let driveSummary = driveSummaries[driveId]
+  //         let plays = []
+  //         const playList = driveSummary.plays
+  //         for (const playId in playList) {
+  //           if (playList.hasOwnProperty(playId)) {
+  //             let play = playList[playId]
+  //             plays.push({
+  //               quarter: play.qtr,
+  //               down: play.down,
+  //               time: play.time,
+  //               yardline: play.yrdln,
+  //               yardsToGo: play.ydstogo,
+  //               netYards: play.ydsnet,
+  //               possessingTeamAbbr: play.posteam,
+  //               description: play.desc,
+  //               note: play.note
+  //             })
+  //           }
+  //         }
 
-          game.drives.push({
-            possessingTeamAbbr: driveSummary.posteam,
-            quarter: driveSummary.qtr,
-            redzone: driveSummary.redzone,
-            firstDowns: driveSummary.fds,
-            result: driveSummary.result,
-            penaltyYards: driveSummary.penyds,
-            yardsGained: driveSummary.ydsgained,
-            numberOfPlays: driveSummary.numplays,
-            possessionTime: driveSummary.postime,
-            start: {
-              quarter: driveSummary.start.qtr,
-              time: driveSummary.start.time,
-              yardline: driveSummary.start.yrdln,
-              teamAbbr: driveSummary.start.team
-            },
-            end: {
-              quarter: driveSummary.end.qtr,
-              time: driveSummary.end.time,
-              yardline: driveSummary.end.yrdln,
-              teamAbbr: driveSummary.end.team
-            },
-            plays
-          })
-        }
-      }
-    }
-  }
+  //         game.drives.push({
+  //           possessingTeamAbbr: driveSummary.posteam,
+  //           quarter: driveSummary.qtr,
+  //           redzone: driveSummary.redzone,
+  //           firstDowns: driveSummary.fds,
+  //           result: driveSummary.result,
+  //           penaltyYards: driveSummary.penyds,
+  //           yardsGained: driveSummary.ydsgained,
+  //           numberOfPlays: driveSummary.numplays,
+  //           possessionTime: driveSummary.postime,
+  //           start: {
+  //             quarter: driveSummary.start.qtr,
+  //             time: driveSummary.start.time,
+  //             yardline: driveSummary.start.yrdln,
+  //             teamAbbr: driveSummary.start.team
+  //           },
+  //           end: {
+  //             quarter: driveSummary.end.qtr,
+  //             time: driveSummary.end.time,
+  //             yardline: driveSummary.end.yrdln,
+  //             teamAbbr: driveSummary.end.team
+  //           },
+  //           plays
+  //         })
+  //       }
+  //     }
+  //   }
+  // }
   game.save()
 }
 

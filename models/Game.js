@@ -168,45 +168,45 @@ const gameSchema = new mongoose.Schema(
         quarter: Number,
         teamAbbr: String
       }
-    ],
-    drives: [
-      {
-        possessingTeamAbbr: String,
-        quarter: Number,
-        redzone: Boolean,
-        firstDowns: Number,
-        result: String,
-        penaltyYards: Number,
-        yardsGained: Number,
-        numberOfPlays: Number,
-        possessionTime: String,
-        start: {
-          quarter: Number,
-          time: String,
-          yardline: String,
-          teamAbbr: String
-        },
-        end: {
-          quarter: Number,
-          time: String,
-          yardline: String,
-          teamAbbr: String
-        },
-        plays: [
-          {
-            quarter: Number,
-            down: Number,
-            time: String,
-            yardline: String,
-            yardsToGo: Number,
-            netYards: Number,
-            possessingTeamAbbr: String,
-            description: String,
-            note: String
-          }
-        ]
-      }
     ]
+    // drives: [
+    //   {
+    //     possessingTeamAbbr: String,
+    //     quarter: Number,
+    //     redzone: Boolean,
+    //     firstDowns: Number,
+    //     result: String,
+    //     penaltyYards: Number,
+    //     yardsGained: Number,
+    //     numberOfPlays: Number,
+    //     possessionTime: String,
+    //     start: {
+    //       quarter: Number,
+    //       time: String,
+    //       yardline: String,
+    //       teamAbbr: String
+    //     },
+    //     end: {
+    //       quarter: Number,
+    //       time: String,
+    //       yardline: String,
+    //       teamAbbr: String
+    //     },
+    //     plays: [
+    //       {
+    //         quarter: Number,
+    //         down: Number,
+    //         time: String,
+    //         yardline: String,
+    //         yardsToGo: Number,
+    //         netYards: Number,
+    //         possessingTeamAbbr: String,
+    //         description: String,
+    //         note: String
+    //       }
+    //     ]
+    //   }
+    // ]
   },
   {
     toJSON: { virtuals: true },

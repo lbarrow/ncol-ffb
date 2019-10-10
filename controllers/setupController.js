@@ -239,6 +239,13 @@ exports.parseCurrentGames = async (req, res) => {
   res.json(parsingResult)
 }
 
+// parse games that are either yet to start, in progress
+// or have finished but we haven't parsed them since they've finished
+exports.onlyUpdateMatchups = async (req, res) => {
+  await updateFantasyPointsForMatchups(1, 16)
+  res.send('Done updating matchups')
+}
+
 parseGames = async (games, startWeek, endWeek) => {
   const gamesCount = games.length
 

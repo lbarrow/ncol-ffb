@@ -78,36 +78,68 @@ ol {
 
 .header {
   background: $green;
-  display: grid;
-  align-items: center;
-  grid-template-columns: 1fr 1fr;
+  @media (min-width: 23.25em) {
+    display: grid;
+    align-items: center;
+    grid-template-columns: 1fr 1fr;
+  }
   h1 {
     font-size: 1.5rem;
     letter-spacing: 0.2rem;
     margin: 0;
+    @media (min-width: 23.25em) {
+      line-height: 1;
+    }
+    strong {
+      @media (min-width: 23.25em) {
+        display: block;
+      }
+      @media (min-width: 48em) {
+        display: inline;
+      }
+    }
     a {
       color: #0f232a;
       display: block;
       font-weight: 400;
-      padding: 2rem;
+      padding: 2rem 2rem 1rem;
       text-decoration: none;
+      text-align: center;
+      @media (min-width: 23.25em) {
+        padding: 1.5rem 2rem;
+        text-align: left;
+      }
+      @media (min-width: 48em) {
+        padding: 2rem;
+      }
     }
   }
 }
 .nav {
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   display: flex;
   align-self: stretch;
   margin-left: auto;
+  justify-content: center;
   padding-right: 1rem;
+  @media (min-width: 25.875em) {
+    font-size: 1.75rem;
+    justify-content: flex-end;
+  }
   a {
     color: #0f232a;
     font-weight: normal;
     display: flex;
     align-items: center;
-    padding: 1rem;
+    padding: 1rem 1rem 2rem;
     position: relative;
     text-decoration: none;
+    @media (min-width: 23.25em) {
+      padding: 1rem;
+    }
+    @media (min-width: 48em) {
+      padding: 2rem 1.5rem;
+    }
     &.router-link-exact-active {
       &::before {
         content: '';

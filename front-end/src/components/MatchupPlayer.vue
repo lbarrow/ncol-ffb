@@ -5,9 +5,15 @@
       .matchup-player__img
         img(:src="playerImageURL" alt="")
       .matchup-player__details
-        h4.matchup-player__name {{player.displayName}}
-          .matchup-player__team(v-if="player.position !== 'DST'") {{player.teamAbbr}}
-        template(v-if="player.game")
+        h4.matchup-player__name
+          template(v-if="player.position !== 'DST'")
+            span.matchup-player__first-letter {{ firstNameLetter }}&nbsp;
+            span.matchup-player__first-name {{ player.firstName}}&nbsp;
+            span.matchup-player__last-name {{ player.lastName}}
+            .matchup-player__team {{player.teamAbbr}}
+          template(v-else)
+            span {{player.teamFullName}}
+        template(v-if="player.game.quarter")
           .matchup-player__game {{ gameDesc }}
         template(v-else)
           .matchup-player__game.matchup-player__game--bye BYE
@@ -57,6 +63,9 @@ export default {
     }
   },
   computed: {
+    firstNameLetter() {
+      return `${this.player.firstName.charAt(0)}.`
+    },
     playerClasses() {
       let isPlaying = false
       if (this.player.game) {
@@ -156,15 +165,20 @@ export default {
 
 <style lang="scss">
 .matchup-player {
-  padding: 0.5rem 1.5rem 0.5rem 1rem;
+  padding: 1rem 1rem 1rem 1.5rem;
   border-radius: 0.5rem;
   border: 1px solid transparent;
-  min-height: 5rem;
+  min-height: 10.6rem;
   display: grid;
-  grid-template-columns: 4rem 1fr auto;
+  grid-template-columns: 4rem 1fr;
   background-color: darken($blue_dark, 7);
   align-items: center;
   position: relative;
+  @media (min-width: 48em) {
+    min-height: 5rem;
+    padding: 0.5rem 1.5rem 0.5rem 1rem;
+    grid-template-columns: 4rem 1fr auto;
+  }
 }
 .matchup-player--best {
   background-color: lighten($blue_dark, 3);
@@ -222,20 +236,49 @@ export default {
   }
 }
 .matchup-player__details {
-  padding-left: 1rem;
+  grid-column: 1 / 3;
+  padding-top: 1rem;
+  @media (min-width: 48em) {
+    grid-area: auto;
+    padding-top: 0;
+    padding-left: 1rem;
+  }
 }
 .matchup-player__name {
   display: flex;
   align-items: baseline;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   font-weight: 300;
+  @media (min-width: 60em) {
+    font-size: 1.5rem;
+  }
+}
+.matchup-player__first-letter {
+  @media (min-width: 60em) {
+    display: none;
+  }
+  .matchup-player--DST & {
+    display: none;
+  }
+}
+.matchup-player__first-name {
+  display: none;
+  @media (min-width: 60em) {
+    display: inline;
+  }
+  .matchup-player--DST & {
+    display: inline;
+  }
 }
 .matchup-player__team {
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   font-family: $font_ideal;
   opacity: 0.5;
   margin-left: 0.6rem;
   letter-spacing: 0.2rem;
+  @media (min-width: 48em) {
+    font-size: 1.1rem;
+  }
 }
 .matchup-player__game {
   font-size: 1rem;
@@ -257,9 +300,14 @@ export default {
 .matchup-player__stat {
 }
 .matchup-player__points {
+  grid-column: 2;
+  grid-row: 1;
   font-size: 2.4rem;
   color: $blue;
   margin-left: auto;
+  @media (min-width: 48em) {
+    grid-area: auto;
+  }
 }
 .matchup-player__points--to-play {
 }

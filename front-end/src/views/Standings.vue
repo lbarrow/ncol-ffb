@@ -9,21 +9,23 @@
           tr
             th.standings-expanded__team-th Team
             th.standings-expanded__record-th Record
-            th.standings-expanded__amount-th Points For
-            th.standings-expanded__amount-th Points Against
+            th.standings-expanded__amount-th
+              abbr(title="Points For") PF
+            th.standings-expanded__amount-th
+              abbr(title="Points Against") PA
             th.standings-expanded__streak-th Streak
             th.standings-expanded__history-th History
         tbody
           tr.standings-expanded__row(v-for="team in teams")
-            td.standings-expanded__team
+            td(data-cell-label="team").standings-expanded__team
               .standings-expanded__team-content
                 .standings-expanded__photo(:class="'owner-photo--' + team.ownerId")
                 .standings-expanded__name {{ team.displayName }}
-            td.standings-expanded__record {{ team.wins }}-{{ team.losses }}
-            td.standings-expanded__amount(v-html="formatScore(team.pointsFor)")
-            td.standings-expanded__amount(v-html="formatScore(team.pointsAgainst)")
-            td.standings-expanded__streak {{ team.streak }}
-            td.standings-expanded__history
+            td(data-cell-label="Record").standings-expanded__record {{ team.wins }}-{{ team.losses }}
+            td(data-cell-label="Points For").standings-expanded__amount(v-html="formatScore(team.pointsFor)")
+            td(data-cell-label="Points Against").standings-expanded__amount(v-html="formatScore(team.pointsAgainst)")
+            td(data-cell-label="Streak").standings-expanded__streak {{ team.streak }}
+            td(data-cell-label="History").standings-expanded__history
               .standings-expanded__history-content
                 span.standings-expanded__result(v-for="result in team.resultHistory" :class="'standings-expanded__result--' + result") {{ result }}
 </template>
@@ -61,9 +63,44 @@ export default {
   border-top: 1px solid rgba(white, 0.1);
   border-radius: 0.5rem;
   width: 100%;
-  td {
+  thead {
+    display: none;
+    @media (min-width: 48em) {
+      display: table-header-group;
+    }
+  }
+  tr {
     border-top: 1px solid rgba(white, 0.1);
-    padding: 2rem 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    padding: 1rem 2rem;
+    @media (min-width: 48em) {
+      padding: 0;
+      display: table-row;
+    }
+  }
+  td {
+    padding: 1rem 0.5rem;
+    display: block;
+    text-align: center;
+    @media (min-width: 48em) {
+      border-top: 1px solid rgba(white, 0.1);
+      display: table-cell;
+      padding: 2rem 1.5rem;
+    }
+    &::before {
+      content: attr(data-cell-label);
+      display: block;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+      line-height: 1;
+      font-size: 1rem;
+      color: white;
+      text-transform: uppercase;
+      @media (min-width: 48em) {
+        display: none;
+      }
+    }
   }
   th {
     color: $green;
@@ -76,12 +113,8 @@ export default {
   }
   .standings-expanded__team-th {
   }
-  .standings-expanded__record-th {
-    text-align: center;
-  }
-  .standings-expanded__amount-th {
-    text-align: right;
-  }
+  .standings-expanded__record-th,
+  .standings-expanded__amount-th,
   .standings-expanded__streak-th {
     text-align: center;
   }
@@ -89,6 +122,11 @@ export default {
     background-color: rgba(darken($blue_dark, 5), 0.65);
   }
   .standings-expanded__team {
+    grid-column: 1 / 4;
+    text-align: left;
+    &::before {
+      display: none;
+    }
   }
   .standings-expanded__team-content {
     display: grid;
@@ -111,26 +149,39 @@ export default {
     color: $blue;
     font-size: 2.4rem;
     text-align: center;
+    &::before {
+      margin-bottom: 0.1rem;
+    }
   }
   .standings-expanded__amount {
     font-size: 2rem;
-    text-align: right;
+    @media (min-width: 48em) {
+      text-align: right;
+    }
   }
   .standings-expanded__streak {
-    opacity: 0.7;
     font-size: 1.5rem;
-    text-align: center;
+    @media (min-width: 48em) {
+      opacity: 0.7;
+    }
   }
-}
-.standings-expanded__history-content {
-  display: flex;
+  .standings-expanded__history {
+    grid-column: 2 / 4;
+    &::before {
+      text-align: left;
+    }
+  }
+  .standings-expanded__history-content {
+    display: flex;
+    flex-wrap: wrap;
+  }
 }
 .standings-expanded__result {
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1rem;
-  margin: 0 0.2rem;
+  margin: 0.2rem;
   border-radius: 100%;
   height: 2rem;
   width: 2rem;

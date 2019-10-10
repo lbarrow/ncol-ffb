@@ -80,51 +80,95 @@ export default {
 .matchup {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-gap: 6rem;
+  margin: 0 -4rem;
+  @media (min-width: 42em) {
+    grid-gap: 6rem;
+    margin: 0;
+  }
 }
 .matchup-team {
-  border: 1px solid rgba(white, 0.1);
-  border-radius: 0.5rem;
-  padding-bottom: 1rem;
+  border-top: 1px solid rgba(white, 0.1);
+  @media (min-width: 48em) {
+    border: 1px solid rgba(white, 0.1);
+    border-radius: 0.5rem;
+  }
 }
 .matchup-team__header {
 }
 .matchup-positions {
   background-color: rgba(black, 0.35);
-  padding: 0 2rem;
+  padding: 2rem 0.8rem;
+  @media (min-width: 42em) {
+    padding: 0 2rem;
+  }
+  .matchup-team:first-child & {
+    padding-left: 1.2rem;
+    @media (min-width: 42em) {
+      padding-left: 2rem;
+    }
+  }
+  .matchup-team:last-child & {
+    padding-right: 1.2rem;
+    @media (min-width: 42em) {
+      padding-right: 2rem;
+    }
+  }
 }
 .matchup-position {
-  padding: 3rem 0;
+  padding: 4rem 0 2rem;
   position: relative;
+
+  @media (min-width: 42em) {
+    padding: 3rem 0;
+  }
 }
 .matchup-position__title {
   font-family: $font_ideal;
-  font-size: 1.2rem;
+  font-size: 1rem;
   letter-spacing: 0.3rem;
   position: absolute;
-  left: calc(100% + 3rem);
-  top: 1.6rem;
+  left: calc(100% - 1rem);
+  top: -1.6rem;
   padding-top: 2.8rem;
   opacity: 0.75;
   text-align: center;
   width: 4.2rem;
-  bottom: 1rem;
-  border-top: 0.2rem solid rgba($blue, 0.6);
-  border-bottom: 0.2rem solid rgba($blue, 0.6);
+  @media (min-width: 42em) {
+    font-size: 1.2rem;
+    border-top: 0.2rem solid rgba($blue, 0.6);
+    border-bottom: 0.2rem solid rgba($blue, 0.6);
+    left: calc(100% + 3rem);
+    top: 1.6rem;
+    padding-top: 2.8rem;
+    opacity: 0.75;
+    text-align: center;
+    width: 4.2rem;
+    bottom: 1rem;
+  }
   &::before,
   &::after {
     background: rgba($blue, 0.4);
     content: '';
     position: absolute;
-    height: 1.8rem;
-    left: calc(50% - 0.05rem);
-    top: 0;
-    width: 0.1rem;
+    height: 0.2rem;
+    left: calc(100% - 0.05rem);
+    top: 3.2rem;
+    width: 100%;
+    @media (min-width: 42em) {
+      height: 1.8rem;
+      left: calc(50% - 0.05rem);
+      top: 0;
+      width: 0.1rem;
+    }
   }
   &::after {
-    top: 5.4rem;
-    height: auto;
-    bottom: 0;
+    left: calc(-100% - 0.3rem);
+    @media (min-width: 42em) {
+      top: 5.4rem;
+      left: calc(50% - 0.05rem);
+      height: auto;
+      bottom: 0;
+    }
   }
 }
 .matchup-team:last-child {
@@ -135,11 +179,12 @@ export default {
 .matchup-players {
 }
 .matchup-players__item {
-  /* border-bottom: 1px solid rgba(white, 0.1); */
   margin-bottom: 0.8rem;
+  @media (min-width: 48em) {
+    margin-bottom: 0.8rem;
+  }
   &:last-child {
     margin-bottom: 0;
-    /* border-bottom: none; */
   }
 }
 </style>

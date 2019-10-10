@@ -218,20 +218,30 @@ const calculateFantasyPoints = async (week, fantasyTeamId) => {
         _id: '$position',
         players: {
           $push: {
-            name: '$name',
             statline: '$statline',
-            game: '$game',
-            displayName: '$displayName',
+            game: {
+              quarter: '$game.quarter',
+              isoTime: '$game.isoTime',
+              clock: '$game.clock',
+              homeTeam: {
+                teamAbbr: '$game.homeTeam.teamAbbr',
+                score: {
+                  current: '$game.homeTeam.score.current'
+                }
+              },
+              awayTeam: {
+                teamAbbr: '$game.awayTeam.teamAbbr',
+                score: {
+                  current: '$game.awayTeam.score.current'
+                }
+              }
+            },
             firstName: '$firstName',
             lastName: '$lastName',
-            esbId: '$esbId',
-            gsisId: '$gsisId',
-            positionGroup: '$positionGroup',
-            position: '$position',
-            teamAbbr: '$teamAbbr',
-            teamId: '$teamId',
             teamFullName: '$teamFullName',
-            fantasyOwner: '$fantasyOwner'
+            esbId: '$esbId',
+            position: '$position',
+            teamAbbr: '$teamAbbr'
           }
         }
       }
@@ -282,7 +292,10 @@ const calculateFantasyPoints = async (week, fantasyTeamId) => {
       bestSpots = 2
     }
     markBestPlayers(bestSpots, position.players)
-
+    // position.players = position.players.map(player => {
+    //   delete player.statline
+    //   return player
+    // })
     return position
   })
 

@@ -48,9 +48,17 @@ export default {
 
 <style lang="scss">
 .league-page {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-gap: 4rem;
+  @media (min-width: 48em) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-gap: 4rem;
+  }
+}
+.league-matchups {
+  margin-bottom: 8rem;
+  @media (min-width: 48em) {
+    margin-bottom: 0;
+  }
 }
 .league-matchups__more,
 .league-standings__more {
