@@ -1,10 +1,11 @@
 <template lang="pug">
   ol.standings-mini
     li.standings-mini__item(v-for="team in teams")
-      .standings-mini__photo(:class="'owner-photo--' + team.ownerId")
-      .standings-mini__name {{ team.displayName }}
-      .standings-mini__record {{team.wins}}-{{team.losses}}
-      .standings-mini__streak {{team.streak}}
+      router-link.standings-mini__link(:to="'/team/' + team.ownerId")
+        .standings-mini__photo(:class="'owner-photo--' + team.ownerId")
+        .standings-mini__name {{ team.displayName }}
+        .standings-mini__record {{team.wins}}-{{team.losses}}
+        .standings-mini__streak {{team.streak}}
 </template>
 
 <script>
@@ -22,7 +23,11 @@ export default {
   margin: 0;
   padding: 0;
 }
-.standings-mini__item {
+.standings-mini__link {
+  display: block;
+  text-decoration: none;
+  color: white;
+  font-weight: normal;
   border: 1px solid rgba(white, 0.1);
   background-color: rgba(darken($blue_dark, 5), 0.65);
   border-radius: 0.5rem;
@@ -30,12 +35,19 @@ export default {
   padding: 1.5rem 1.5rem 1.5rem 8.5rem;
   position: relative;
   padding-left: 8.5rem;
+  transition: all 0.2s ease;
   @media (min-width: 25.875em) {
     display: grid;
     padding: 1rem;
     align-items: center;
     grid-column-gap: 2rem;
     grid-template-columns: 6rem 1fr auto 3.5rem;
+  }
+  &:hover {
+    background-color: rgba($blue, 0.15);
+    border-color: rgba($blue, 0.15);
+    box-shadow: 0 8px 12px rgba(black, 0.8);
+    transform: translateY(-0.4rem);
   }
 }
 .standings-mini__photo {

@@ -7,7 +7,8 @@ module.exports = {
     }
   },
   devServer: {
-    public: 'localhost'
+    public: 'localhost',
+    proxy: 'http://localhost:4445'
   },
   outputDir: '../public/'
 }

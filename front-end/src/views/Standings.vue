@@ -16,7 +16,7 @@
             th.standings-expanded__streak-th Streak
             th.standings-expanded__history-th History
         tbody
-          tr.standings-expanded__row(v-for="team in teams")
+          tr.standings-expanded__row(v-for="team in teams" @click="teamClicked(team.ownerId)")
             td(data-cell-label="team").standings-expanded__team
               .standings-expanded__team-content
                 .standings-expanded__photo(:class="'owner-photo--' + team.ownerId")
@@ -46,6 +46,9 @@ export default {
   methods: {
     formatScore(score) {
       return scoreFormatter(score)
+    },
+    teamClicked(teamId) {
+      this.$router.push(`/team/${teamId}`)
     }
   }
 }
@@ -74,9 +77,16 @@ export default {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     padding: 1rem 2rem;
+    transition: all 0.2s ease;
     @media (min-width: 48em) {
       padding: 0;
       display: table-row;
+    }
+    &:hover {
+      background-color: rgba($blue, 0.15);
+      border-color: rgba($blue, 0.15);
+      box-shadow: 0 8px 12px rgba(black, 0.8);
+      transform: translateY(-0.4rem);
     }
   }
   td {

@@ -20,6 +20,11 @@ export default new Router({
         import(/* webpackChunkName: "standings" */ './views/Standings.vue')
     },
     {
+      path: '/team/:id',
+      name: 'team',
+      component: () => import(/* webpackChunkName: "team" */ './views/Team.vue')
+    },
+    {
       path: '/matchups/',
       name: 'matchups',
       component: () =>

@@ -3,10 +3,9 @@ const router = express.Router()
 // const teamController = require('../controllers/teamController')
 const setupController = require('../controllers/setupController')
 const apiController = require('../controllers/apiController')
-const mainController = require('../controllers/mainController')
+const vueAppController = require('../controllers/vueAppController')
 
-router.get('/', mainController.index)
-router.get('/test/', mainController.index)
+router.get('/', vueAppController.index)
 
 router.get('/setup/', setupController.index)
 router.get('/setup/schedule', setupController.parseSchedule)
