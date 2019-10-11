@@ -5,6 +5,7 @@ const path = require('path')
 const cors = require('cors')
 const bodyParser = require('body-parser')
 const routes = require('./routes/index')
+const history = require('connect-history-api-fallback')
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views')) // this is the folder where we keep our pug files
@@ -20,6 +21,14 @@ app.use(bodyParser.urlencoded({ extended: true }))
 
 // After allllll that above middleware, we finally handle our own routes!
 app.use('/', routes)
+
+// so vue can takeover all the other routes
+// app.use(
+//   history({
+//     logger: console.log.bind(console),
+//     index: '/index.html'
+//   })
+// )
 
 // done! we export it so we can start the site in start.js
 module.exports = app

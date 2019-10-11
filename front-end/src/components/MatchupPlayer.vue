@@ -1,5 +1,5 @@
 <template lang="pug">
-  div
+  div(@click="showStatlineModal")
     .matchup-player.matchup-player--spacer(v-if="spacer")
     .matchup-player(v-else :class="playerClasses")
       .matchup-player__img
@@ -13,30 +13,46 @@
             .matchup-player__team {{player.teamAbbr}}
           template(v-else)
             span {{player.teamFullName}}
-        template(v-if="player.game.quarter")
+        template(v-if="player.game.isoTime")
           .matchup-player__game {{ gameDesc }}
         template(v-else)
           .matchup-player__game.matchup-player__game--bye BYE
-      //- .matchup-player__statline(v-if="player.statline")
-      //-   ul.matchup-player__stats.matchup-player__stats--dst(v-if="player.position === 'DST'")
-      //-     li {{player.statline.sacks}} sacks
-      //-     li {{player.statline.fumbles}} fumbles
-      //-     li {{player.statline.ints}} ints
-      //-     li {{player.statline.safeties}} safeties
-      //-     li {{player.statline.TDs}} TDs
-      //-     li {{player.statline.pointsAllowed}} pointsAllowed
-      //-   ul.matchup-player__stats(v-else)
-      //-     li.matchup-player__stat(v-if="player.statline.passingAttempts")
-      //-       | {{player.statline.passingCompletions}}/{{player.statline.passingAttempts}} for {{player.statline.passingYards}} yards, {{player.statline.passingTDs}} TDs, {{player.statline.passingInts}} Ints
-      //-       template(v-if="player.statline.passingTwoPts") {{player.statline.passingTwoPts}} Two Point Conversions
-      //-     li.matchup-player__stat(v-if="player.statline.rushingAttempts")
-      //-       | {{player.statline.rushingAttempts}} rushes for {{player.statline.rushingYards}} yards, {{player.statline.rushingTDs}} TDs
-      //-       template(v-if="player.statline.rushingTwoPts") {{player.statline.rushingTwoPts}} Two Point Conversions
-      //-     li.matchup-player__stat(v-if="player.statline.receivingReceptions")
-      //-       | {{player.statline.receivingReceptions}} receptions for {{player.statline.receivingYards}} yards, {{player.statline.receivingTDs}} TDs
-      //-       template(v-if="player.statline.receivingTwoPts") {{player.statline.receivingTwoPts}} Two Point Conversions
-      //-     li.matchup-player__stat(v-if="player.statline.fumbles")
-      //-       | {{player.statline.fumbles}} Fumbles
+        .matchup-player__stats(v-if="showStatline")
+          .matchup-player__statline(v-if="player.statline")
+            .matchup-player__statline-inner
+              .matchup-player__statline-img
+                img(:src="playerImageURL" alt="")
+              template(v-if="player.position !== 'DST'")
+                .matchup-player__statline-name {{ player.firstName}} {{ player.lastName}}
+                  .matchup-player__statline-team {{player.teamAbbr}}
+              template(v-else)
+                .matchup-player__statline-name {{player.teamFullName}}
+              .matchup-player__statline-game {{ gameDesc }}
+              ul.matchup-player__stats.matchup-player__stats--dst(v-if="player.position === 'DST'")
+                li.matchup-player__stat(v-if="player.statline.sacks")
+                  | {{player.statline.sacks}} sacks
+                li.matchup-player__stat(v-if="player.statline.fumbles")
+                  | {{player.statline.fumbles}} fumble recoveries
+                li.matchup-player__stat(v-if="player.statline.ints")
+                  | {{player.statline.ints}} interceptions
+                li.matchup-player__stat(v-if="player.statline.safeties")
+                  | {{player.statline.safeties}} safeties
+                li.matchup-player__stat(v-if="player.statline.TDs")
+                  | {{player.statline.TDs}} TDs
+                li.matchup-player__stat(v-if="player.statline.pointsAllowed")
+                  | {{player.statline.pointsAllowed}} points allowed
+              ul.matchup-player__stats(v-else)
+                li.matchup-player__stat(v-if="player.statline.passingAttempts")
+                  | {{player.statline.passingCompletions}}/{{player.statline.passingAttempts}} for {{player.statline.passingYards}} yards, {{player.statline.passingTDs}} TDs, {{player.statline.passingInts}} Ints
+                  template(v-if="player.statline.passingTwoPts") {{player.statline.passingTwoPts}} Two Point Conversions
+                li.matchup-player__stat(v-if="player.statline.rushingAttempts")
+                  | {{player.statline.rushingAttempts}} rushes for {{player.statline.rushingYards}} yards, {{player.statline.rushingTDs}} TDs
+                  template(v-if="player.statline.rushingTwoPts") {{player.statline.rushingTwoPts}} Two Point Conversions
+                li.matchup-player__stat(v-if="player.statline.receivingReceptions")
+                  | {{player.statline.receivingReceptions}} receptions for {{player.statline.receivingYards}} yards, {{player.statline.receivingTDs}} TDs
+                  template(v-if="player.statline.receivingTwoPts") {{player.statline.receivingTwoPts}} Two Point Conversions
+                li.matchup-player__stat(v-if="player.statline.fumbles")
+                  | {{player.statline.fumbles}} fumbles
       .matchup-player__points(v-html="playerFantasyPoints")
 </template>
 
@@ -50,6 +66,11 @@ export default {
     spacer: {
       type: Boolean,
       default: false
+    }
+  },
+  data() {
+    return {
+      showStatline: false
     }
   },
   watch: {
@@ -133,10 +154,20 @@ export default {
         return `${gameResult} ${game.homeTeam.score.current}-${game.awayTeam.score.current} vs ${this.opponentAbbr}`
       }
       const score = `${game.homeTeam.teamAbbr} ${game.homeTeam.score.current} @ ${game.awayTeam.teamAbbr} ${game.awayTeam.score.current}`
+      if (game.quarter === 'Halftime') {
+        return `${score} • Half`
+      }
       return `${score} • ${this.formatQuarter(game.quarter)} ${game.clock}`
     }
   },
   methods: {
+    showStatlineModal() {
+      if (this.player.statline && !this.showStatline) {
+        this.showStatline = true
+      } else {
+        this.showStatline = false
+      }
+    },
     formatQuarter(quarter) {
       switch (quarter) {
         case '1':
@@ -203,10 +234,18 @@ export default {
     position: absolute;
     opacity: 1;
     right: 0;
-    top: 0;
-    bottom: 0;
-    width: 7.2rem;
-    border-radius: 0 0.5rem 0.5rem 0;
+    top: 1rem;
+    height: 4rem;
+    width: 6rem;
+    @media (min-width: 48em) {
+      opacity: 1;
+      right: 0;
+      top: 0;
+      height: auto;
+      bottom: 0;
+      width: 7.2rem;
+      border-radius: 0 0.5rem 0.5rem 0;
+    }
   }
   .matchup-player__points {
     color: $blue_dark;
@@ -288,6 +327,66 @@ export default {
 .matchup-player__game--bye {
 }
 .matchup-player__statline {
+  position: fixed;
+  background-color: rgba(black, 0.5);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+.matchup-player__statline-inner {
+  background-color: $green;
+  border-radius: 4px;
+  padding: 2rem 2rem 1rem;
+  color: $blue_dark;
+  width: 30rem;
+}
+.matchup-player__statline-img {
+  background-color: white;
+  border-radius: 100%;
+  height: 12rem;
+  width: 12rem;
+  border: 0.5rem solid white;
+  box-shadow: 0 2px 2px rgba(black, 0.05), 0 4px 4px rgba(black, 0.08),
+    0 12px 12px rgba(black, 0.11);
+  margin: -4rem auto 1rem;
+  overflow: hidden;
+  position: relative;
+  img {
+    position: absolute;
+    left: -1.5rem;
+    top: 0.3rem;
+    max-width: 14rem;
+    .matchup-player--DST & {
+      left: 0.5rem;
+      top: 0.5rem;
+      max-width: 10rem;
+    }
+  }
+}
+.matchup-player__statline-name {
+  font-size: 2.4rem;
+  text-align: center;
+}
+.matchup-player__statline-team {
+  display: inline-block;
+  font-size: 1.2rem;
+  margin-left: 0.4rem;
+  font-weight: bold;
+  font-family: $font_ideal;
+  letter-spacing: 0.1em;
+  opacity: 0.5;
+}
+.matchup-player__statline-game {
+  text-align: center;
+  font-size: 1.1rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
 }
 .matchup-player__best {
 }
@@ -298,6 +397,8 @@ export default {
 .matchup-player__stats {
 }
 .matchup-player__stat {
+  border-top: 1px solid rgba(black, 0.15);
+  padding: 0.8rem 0;
 }
 .matchup-player__points {
   grid-column: 2;

@@ -77,7 +77,10 @@ export default {
   letter-spacing: 0.2rem;
   font-weight: 300;
   justify-content: center;
-  font-size: 1.3rem;
+  font-size: 1.2rem;
+  @media (min-width: 48em) {
+    font-size: 1.3rem;
+  }
   strong {
     font-weight: 800;
   }

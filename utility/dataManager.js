@@ -1,9 +1,41 @@
 const axios = require('axios')
 const mongoose = require('mongoose')
+const getCurrentWeek = require('../utility/getCurrentWeek')
+const moment = require('moment')
 
+const Game = mongoose.model('Game')
 const Player = mongoose.model('Player')
 const Statline = mongoose.model('Statline')
 const Matchup = mongoose.model('Matchup')
+
+exports.getCurrentGameData = async () => {
+  const week = getCurrentWeek.getCurrentWeek()
+  const games = await Game.find({
+    isoTime: {
+      $lt: moment()
+        .add(15, 'minutes')
+        .toDate(),
+      $gt: moment()
+        .subtract(6, 'hours')
+        .toDate()
+    },
+    $or: [
+      {
+        quarter: {
+          $ne: 'Final'
+        }
+      },
+      {
+        quarter: {
+          $ne: 'final overtime'
+        }
+      }
+    ]
+  })
+
+  const parsingResult = await parseGames(games, week, week)
+  return parsingResult
+}
 
 exports.updateFantasyPointsForMatchups = async (startWeek, endWeek) => {
   for (let week = startWeek; week <= endWeek; week++) {
@@ -674,6 +706,7 @@ setupTeamDefense = (game, thisSideString) => {
     ) {
       // see if it was an interception or fumble return
       if (
+        scoreSummary.description.includes('blocked') ||
         scoreSummary.description.includes('interception return') ||
         scoreSummary.description.includes('fumble return')
       ) {

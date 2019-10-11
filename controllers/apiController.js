@@ -323,3 +323,13 @@ function markBestPlayers(bestSpots, players) {
     }
   }
 }
+
+exports.teamDetail = async (req, res) => {
+  const ownerId = req.params.id
+  const owner = await Owner.findOne({ ownerId })
+  const data = {
+    owner
+  }
+  res.header('Content-Type', 'application/json')
+  res.send(JSON.stringify(data, null, 4))
+}

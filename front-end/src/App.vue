@@ -55,6 +55,7 @@ html {
   background: $blue_dark url(/graphics/bg.jpg);
   background-size: contain;
   background-repeat: no-repeat;
+  background-position-y: 4rem;
   color: white;
   font: 62.5%/1.5 $font_ringside;
   font-weight: 400;

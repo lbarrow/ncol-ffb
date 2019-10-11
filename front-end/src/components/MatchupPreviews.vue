@@ -54,8 +54,10 @@ export default {
   text-align: center;
   transition: all 0.2s ease;
   .matchup-preview--expanded & {
-    grid-gap: 3rem;
-    padding: 2.5rem 2rem;
+    @media (min-width: 48em) {
+      grid-gap: 3rem;
+      padding: 2.5rem 2rem;
+    }
   }
   &:hover {
     background-color: rgba($blue, 0.15);
@@ -66,14 +68,18 @@ export default {
 }
 .matchup-preview__player {
   .matchup-preview--expanded & {
-    align-items: center;
-    display: grid;
-    grid-gap: 2rem;
-    grid-template-columns: 8rem 1fr;
-    text-align: left;
+    @media (min-width: 48em) {
+      align-items: center;
+      display: grid;
+      grid-gap: 2rem;
+      grid-template-columns: 8rem 1fr;
+      text-align: left;
+    }
   }
   .matchup-preview--expanded &.matchup-preview__player--first {
-    grid-template-columns: 1fr 8rem;
+    @media (min-width: 48em) {
+      grid-template-columns: 1fr 8rem;
+    }
   }
 }
 .matchup-preview__player--second {
@@ -85,26 +91,34 @@ export default {
   margin: 0 auto 1rem;
   background-size: contain;
   .matchup-preview--expanded & {
-    width: 8rem;
-    height: 8rem;
-    margin: 0;
+    @media (min-width: 48em) {
+      width: 8rem;
+      height: 8rem;
+      margin: 0;
+    }
   }
   .matchup-preview--expanded .matchup-preview__player--first & {
-    grid-column: 2;
+    @media (min-width: 48em) {
+      grid-column: 2;
+    }
   }
 }
 .matchup-preview__name {
   .matchup-preview--expanded .matchup-preview__player--first & {
-    grid-column: 1;
-    grid-row: 1;
-    text-align: right;
+    @media (min-width: 48em) {
+      grid-column: 1;
+      grid-row: 1;
+      text-align: right;
+    }
   }
 }
 .matchup-preview__display-name {
   .matchup-preview--expanded & {
-    font-size: 1.8rem;
-    padding-bottom: 0.2rem;
-    line-height: 1.2;
+    @media (min-width: 48em) {
+      font-size: 1.8rem;
+      padding-bottom: 0.2rem;
+      line-height: 1.2;
+    }
   }
 }
 .matchup-preview__record {
@@ -113,16 +127,20 @@ export default {
   font-weight: normal;
   opacity: 0.7;
   .matchup-preview--expanded & {
-    font-size: 1.4rem;
-    padding-bottom: 0.6rem;
+    @media (min-width: 48em) {
+      font-size: 1.4rem;
+      padding-bottom: 0.6rem;
+    }
   }
 }
 .matchup-preview__points {
   font-size: 2.4rem;
   color: $blue;
   .matchup-preview--expanded & {
-    font-size: 3rem;
-    line-height: 1;
+    @media (min-width: 48em) {
+      font-size: 3rem;
+      line-height: 1;
+    }
   }
 }
 .matchup-preview__vs {

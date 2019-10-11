@@ -1,6 +1,6 @@
 const cron = require('node-cron')
-const axios = require('axios')
+const { getCurrentGameData } = require('../utility/dataManager')
 
-// cron.schedule('*/10 * * * * *', async () => {
-//   await axios('http://localhost:4444/setup/parse')
+// cron.schedule('*/30 * * * * *', async () => {
+//   await getCurrentGameData()
 // })

@@ -3,11 +3,11 @@
     .team-page__inner
       h2.page-title
         .page-title__sub Team
-        .page-title__main Bern's Winners
-    .team
-      div 4-1
-      div upcoming schedule
-      div players
+        .page-title__main {{ owner.displayName}}
+    .team coming soon
+      //- div {{ owner.wins }}-{{owner.losses}}
+      //- div upcoming schedule
+      //- div players
 </template>
 
 <script>
@@ -17,28 +17,33 @@ export default {
   name: 'Team',
   data() {
     return {
-      team: {},
-      teams: []
+      owner: {},
+      players: []
     }
   },
   async mounted() {
-    // const API_URL = `/api/team/${this.$route.params.id}`
-    // const response = await axios.get(API_URL)
-    // this.team = response.data.team
-    // this.teams = response.data.teams
+    const API_URL = `/api/team/${this.$route.params.id}`
+    const response = await axios.get(API_URL)
+    this.owner = response.data.owner
   }
 }
 </script>
 
 <style lang="scss">
 .team {
-  display: grid;
+  background-color: rgba(black, 0.25);
+  border-top: 1px solid rgba(white, 0.1);
+  font-style: italic;
+  font-weight: normal;
+  padding: 4rem;
+  text-align: center;
+  /* display: grid;
   grid-template-columns: 1fr 1fr;
   margin: 0 -4rem;
   @media (min-width: 42em) {
     grid-gap: 6rem;
     margin: 0;
-  }
+  } */
 }
 .team-team {
   border-top: 1px solid rgba(white, 0.1);

@@ -30,5 +30,8 @@ router.get('/api/', apiController.index)
 router.get('/api/standings/', apiController.standings)
 router.get('/api/matchups/', apiController.matchups)
 router.get('/api/matchup/:id/', apiController.matchupDetail)
+router.get('/api/team/:id/', apiController.teamDetail)
+
+router.get('*', vueAppController.index)
 
 module.exports = router

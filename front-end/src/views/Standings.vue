@@ -82,6 +82,8 @@ export default {
       padding: 0;
       display: table-row;
     }
+  }
+  tbody tr {
     &:hover {
       background-color: rgba($blue, 0.15);
       border-color: rgba($blue, 0.15);

@@ -5,6 +5,7 @@ const moment = require('moment')
 const downloadImage = require('../utility/downloadImage')
 const getCurrentWeek = require('../utility/getCurrentWeek')
 const {
+  getCurrentGameData,
   updateFantasyPointsForMatchups,
   updateStatsForGameFromNFL,
   statlinesFromGame
@@ -211,31 +212,7 @@ exports.parseThisWeek = async (req, res) => {
 // parse games that are either yet to start, in progress
 // or have finished but we haven't parsed them since they've finished
 exports.parseCurrentGames = async (req, res) => {
-  const week = getCurrentWeek.getCurrentWeek()
-  const games = await Game.find({
-    isoTime: {
-      $lt: moment()
-        .add(15, 'minutes')
-        .toDate(),
-      $gt: moment()
-        .subtract(6, 'hours')
-        .toDate()
-    },
-    $or: [
-      {
-        quarter: {
-          $ne: 'Final'
-        }
-      },
-      {
-        quarter: {
-          $ne: 'final overtime'
-        }
-      }
-    ]
-  })
-
-  const parsingResult = await parseGames(games, week, week)
+  const parsingResult = await getCurrentGameData()
   res.json(parsingResult)
 }
 
