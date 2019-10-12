@@ -23,7 +23,8 @@
     "moment": "^2.24.0",
     "mongoose": "^5.6.4",
     "node-cron": "^2.0.3",
-    "pug": "^2.0.4"
+    "pug": "^2.0.4",
+    "xml-js": "^1.6.11"
   },
   "devDependencies": {
     "nodemon": "^1.19.1"

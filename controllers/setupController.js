@@ -4,6 +4,8 @@ const path = require('path')
 const moment = require('moment')
 const downloadImage = require('../utility/downloadImage')
 const getCurrentWeek = require('../utility/getCurrentWeek')
+const convertToJSON = require('xml-js')
+
 const {
   getCurrentGameData,
   updateFantasyPointsForMatchups,
@@ -25,33 +27,41 @@ exports.index = async (req, res) => {
 exports.parseSchedule = async (req, res) => {
   const scheduleURL = 'http://www.nfl.com/feeds-rs/schedules/2019'
   // const scheduleURL = 'http://localhost:4444/schedule.json'
-  const response = await axios(scheduleURL)
-  const gamesJSON = response.data.gameSchedules
+  const response = await axios({
+    method: 'get',
+    url: scheduleURL,
+    responseType: 'xml'
+  })
+  const xml = response.data
+  const scheduleJSON = convertToJSON.xml2js(xml, {
+    compact: true
+  })
+  const gamesJSON = scheduleJSON.gameSchedulesFeed.gameSchedules.gameSchedule
   const games = gamesJSON.map(item => {
     return {
-      gameId: item.gameId,
-      season: item.season,
-      seasonType: item.seasonType,
-      week: item.week,
-      gameKey: item.gameKey,
-      gameDate: item.gameDate,
-      gameTimeEastern: item.gameTimeEastern,
-      gameTimeLocal: item.gameTimeLocal,
-      isoTime: new Date(item.isoTime),
-      gameType: item.gameType,
-      weekNameAbbr: item.weekNameAbbr,
-      weekName: item.weekName,
+      gameId: parseInt(item._attributes.gameId),
+      season: parseInt(item._attributes.season),
+      seasonType: item._attributes.seasonType,
+      week: parseInt(item._attributes.week),
+      gameKey: item._attributes.gameKey,
+      gameDate: item._attributes.gameDate,
+      gameTimeEastern: item._attributes.gameTimeEastern,
+      gameTimeLocal: item._attributes.gameTimeLocal,
+      isoTime: new Date(item._attributes.isoTime),
+      gameType: item._attributes.gameType,
+      weekNameAbbr: item._attributes.weekNameAbbr,
+      weekName: item._attributes.weekName,
       homeTeam: {
-        teamId: item.homeTeam.teamId,
-        teamAbbr: item.homeTeam.abbr,
-        displayName: item.homeTeam.fullName,
-        nickname: item.homeTeam.nick
+        teamId: item._attributes.homeTeamId,
+        teamAbbr: item._attributes.homeTeamAbbr,
+        displayName: item._attributes.homeDisplayName,
+        nickname: item._attributes.homeNickname
       },
       awayTeam: {
-        teamId: item.visitorTeam.teamId,
-        teamAbbr: item.visitorTeam.abbr,
-        displayName: item.visitorTeam.fullName,
-        nickname: item.visitorTeam.nick
+        teamId: item._attributes.visitorTeamId,
+        teamAbbr: item._attributes.visitorTeamAbbr,
+        displayName: item._attributes.visitorDisplayName,
+        nickname: item._attributes.visitorNickname
       }
     }
   })
@@ -75,7 +85,7 @@ exports.parseSchedule = async (req, res) => {
     )
   }
 
-  res.send(`updated ${regSeasonGames.length} games`)
+  res.json({ regSeasonGames })
 }
 
 // setup fantasy team matchups in db from local json schedule
@@ -194,8 +204,21 @@ exports.parseAllGames = async (req, res) => {
   res.json(parsingResult)
 }
 
+// parse games in a week provided by paramater
+exports.parseSpecificWeek = async (req, res) => {
+  const week = parseInt(req.params.week)
+  const games = await Game.find({
+    week
+  })
+  console.log('query done: grabbed games')
+
+  const parsingResult = await parseGames(games, week, week)
+  res.json(parsingResult)
+}
+
 // parse games in this week that have a start time in the past
 exports.parseThisWeek = async (req, res) => {
+  const startTime = moment()
   const week = getCurrentWeek.getCurrentWeek()
   const games = await Game.find({
     week,
@@ -206,6 +229,8 @@ exports.parseThisWeek = async (req, res) => {
   })
 
   const parsingResult = await parseGames(games, week, week)
+  const now = moment()
+  console.log('took ' + now.diff(startTime) + 'ms') /// 6431 original result
   res.json(parsingResult)
 }
 
@@ -230,9 +255,13 @@ parseGames = async (games, startWeek, endWeek) => {
   let statlinesCount = 0
   for (let i = 0; i < games.length; i++) {
     await updateStatsForGameFromNFL(games[i])
-    statlinesCount += await statlinesFromGame(games[i])
     console.log(
-      `${games[i].awayTeam.teamAbbr} @ ${games[i].homeTeam.teamAbbr} parsed`
+      `done: updateStatesForGameFromNFL ${games[i].awayTeam.teamAbbr} @ ${games[i].homeTeam.teamAbbr}`
+    )
+    const statlinesParsed = await statlinesFromGame(games[i])
+    statlinesCount += statlinesParsed
+    console.log(
+      `${statlinesParsed} statlines for ${games[i].awayTeam.teamAbbr} @ ${games[i].homeTeam.teamAbbr} parsed`
     )
   }
 
