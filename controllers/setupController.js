@@ -48,22 +48,18 @@ exports.parseSchedule = async (req, res) => {
       gameDate: item._attributes.gameDate,
       gameTimeEastern: item._attributes.gameTimeEastern,
       gameTimeLocal: item._attributes.gameTimeLocal,
-      isoTime: new Date(item._attributes.isoTime),
+      isoTime: item._attributes.isoTime,
       gameType: item._attributes.gameType,
       weekNameAbbr: item._attributes.weekNameAbbr,
       weekName: item._attributes.weekName,
-      homeTeam: {
-        teamId: item._attributes.homeTeamId,
-        teamAbbr: item._attributes.homeTeamAbbr,
-        displayName: item._attributes.homeDisplayName,
-        nickname: item._attributes.homeNickname
-      },
-      awayTeam: {
-        teamId: item._attributes.visitorTeamId,
-        teamAbbr: item._attributes.visitorTeamAbbr,
-        displayName: item._attributes.visitorDisplayName,
-        nickname: item._attributes.visitorNickname
-      }
+      home_teamId: item._attributes.homeTeamId,
+      home_teamAbbr: item._attributes.homeTeamAbbr,
+      home_displayName: item._attributes.homeDisplayName,
+      home_nickname: item._attributes.homeNickname,
+      away_teamId: item._attributes.visitorTeamId,
+      away_teamAbbr: item._attributes.visitorTeamAbbr,
+      away_displayName: item._attributes.visitorDisplayName,
+      away_nickname: item._attributes.visitorNickname
     }
   })
 
@@ -76,17 +72,113 @@ exports.parseSchedule = async (req, res) => {
   })
 
   // insert or update stats
+  let gamesUpdated = 0
+  let gamesInserted = 0
   for (let i = 0; i < regSeasonGames.length; i++) {
-    await Game.findOneAndUpdate(
-      {
-        gameId: regSeasonGames[i].gameId
-      },
-      regSeasonGames[i],
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    )
+    const game = regSeasonGames[i]
+    const { rows } = await db.query(`SELECT id FROM game WHERE gameid = $1`, [
+      game.gameId
+    ])
+    if (rows.length) {
+      // if game exists, update it with rows[0].id
+      gamesUpdated++
+      await db.query(
+        `UPDATE game SET gameid = $1,
+            season = $2,
+            seasontype = $3,
+            week = $4,
+            gamekey = $5,
+            gamedate = $6,
+            gametimeeastern = $7,
+            gametimelocal = $8,
+            isotime = $9,
+            gametype = $10,
+            weeknameabbr = $11,
+            weekname = $12,
+            home_teamid = $13,
+            home_teamabbr = $14,
+            home_displayname = $15,
+            home_nickname = $16,
+            away_teamid = $17,
+            away_teamabbr = $18,
+            away_displayname = $19,
+            away_nickname = $20
+          WHERE id = $21`,
+        [
+          game.gameId,
+          game.season,
+          game.seasonType,
+          game.week,
+          game.gameKey,
+          game.gameDate,
+          game.gameTimeEastern,
+          game.gameTimeLocal,
+          game.isoTime,
+          game.gameType,
+          game.weekNameAbbr,
+          game.weekName,
+          game.home_teamId,
+          game.home_teamAbbr,
+          game.home_displayName,
+          game.home_nickname,
+          game.away_teamId,
+          game.away_teamAbbr,
+          game.away_displayName,
+          game.away_nickname,
+          rows[0].id
+        ]
+      )
+    } else {
+      // insert it
+      gamesInserted++
+      await db.query(
+        `INSERT INTO game (gameid,
+          season,
+          seasontype,
+          week,
+          gamekey,
+          gamedate,
+          gametimeeastern,
+          gametimelocal,
+          isotime,
+          gametype,
+          weeknameabbr,
+          weekname,
+          home_teamid,
+          home_teamabbr,
+          home_displayname,
+          home_nickname,
+          away_teamid,
+          away_teamabbr,
+          away_displayname,
+          away_nickname) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`,
+        [
+          game.gameId,
+          game.season,
+          game.seasonType,
+          game.week,
+          game.gameKey,
+          game.gameDate,
+          game.gameTimeEastern,
+          game.gameTimeLocal,
+          game.isoTime,
+          game.gameType,
+          game.weekNameAbbr,
+          game.weekName,
+          game.home_teamId,
+          game.home_teamAbbr,
+          game.home_displayName,
+          game.home_nickname,
+          game.away_teamId,
+          game.away_teamAbbr,
+          game.away_displayName,
+          game.away_nickname
+        ]
+      )
+    }
   }
 
-  res.json({ regSeasonGames })
+  res.send(`${gamesUpdated} games updated  |  ${gamesInserted} games inserted`)
 }
 
 // setup fantasy team matchups in db from local json schedule
