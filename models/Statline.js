@@ -3,7 +3,7 @@ mongoose.Promise = global.Promise
 
 const statlineSchema = new mongoose.Schema(
   {
-    gsisId: String,
+    gsisId: { type: String, index: true },
     player: {
       type: mongoose.Schema.ObjectId,
       ref: 'Player'
@@ -40,13 +40,5 @@ const statlineSchema = new mongoose.Schema(
     toObject: { virtuals: true }
   }
 )
-
-function autopopulate(next) {
-  this.populate('player')
-  next()
-}
-
-statlineSchema.pre('find', autopopulate)
-statlineSchema.pre('findOne', autopopulate)
 
 module.exports = mongoose.model('Statline', statlineSchema)

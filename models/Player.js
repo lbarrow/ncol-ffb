@@ -10,7 +10,7 @@ const playerSchema = new mongoose.Schema(
     firstName: String,
     lastName: String,
     esbId: String,
-    gsisId: String,
+    gsisId: { type: String, index: true },
     middleName: String,
     birthDate: String,
     homeTown: String,

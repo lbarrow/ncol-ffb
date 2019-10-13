@@ -218,7 +218,6 @@ exports.parseSpecificWeek = async (req, res) => {
 
 // parse games in this week that have a start time in the past
 exports.parseThisWeek = async (req, res) => {
-  const startTime = moment()
   const week = getCurrentWeek.getCurrentWeek()
   const games = await Game.find({
     week,
@@ -229,8 +228,6 @@ exports.parseThisWeek = async (req, res) => {
   })
 
   const parsingResult = await parseGames(games, week, week)
-  const now = moment()
-  console.log('took ' + now.diff(startTime) + 'ms') /// 6431 original result
   res.json(parsingResult)
 }
 
@@ -254,19 +251,35 @@ parseGames = async (games, startWeek, endWeek) => {
   // parse them all
   let statlinesCount = 0
   for (let i = 0; i < games.length; i++) {
+    const beforeQuery1 = moment()
     await updateStatsForGameFromNFL(games[i])
+    // console.log(
+    //   `done: updateStatesForGameFromNFL ${games[i].awayTeam.teamAbbr} @ ${games[i].homeTeam.teamAbbr}`
+    // )
     console.log(
-      `done: updateStatesForGameFromNFL ${games[i].awayTeam.teamAbbr} @ ${games[i].homeTeam.teamAbbr}`
-    )
+      'updating games with json results took ' +
+        moment().diff(beforeQuery1) +
+        'ms'
+    ) /// 6431 original result
+
+    const beforeQuery2 = moment()
     const statlinesParsed = await statlinesFromGame(games[i])
     statlinesCount += statlinesParsed
     console.log(
-      `${statlinesParsed} statlines for ${games[i].awayTeam.teamAbbr} @ ${games[i].homeTeam.teamAbbr} parsed`
-    )
+      statlinesParsed +
+        ' statlines by statlinesFromGame took ' +
+        moment().diff(beforeQuery2) +
+        'ms'
+    ) /// 6431 original result
+    // console.log(`${statlinesParsed} statlines for ${games[i].awayTeam.teamAbbr} @ ${games[i].homeTeam.teamAbbr} parsed`)
   }
 
   // update fantasy point totals in matchup collection
+  const beforeQuery3 = moment()
   await updateFantasyPointsForMatchups(startWeek, endWeek)
+  console.log(
+    'updateFantasyPointsForMatchups took ' + moment().diff(beforeQuery3) + 'ms'
+  ) /// 6431 original result
 
   return {
     statlinesCount,

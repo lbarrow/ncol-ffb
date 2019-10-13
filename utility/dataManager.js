@@ -69,6 +69,7 @@ totalPointsForTeamWeek = async (fantasyTeamId, week) => {
   let playersLeft = 0
   let playersPlaying = 0
   let playersDone = 0
+  const beforeQuery4 = moment()
   let positions = await Player.aggregate([
     {
       $match: {
@@ -138,6 +139,9 @@ totalPointsForTeamWeek = async (fantasyTeamId, week) => {
     },
     { $sort: { _id: 1 } }
   ])
+  console.log(
+    'grabbing players for team took ' + moment().diff(beforeQuery4) + 'ms'
+  ) /// 6431 original result
 
   // sort the positions in specific order
   const sortOrder = ['QB', 'RB', 'WR', 'TE', 'DST']
@@ -555,7 +559,9 @@ exports.statlinesFromGame = async game => {
   ]
 
   // insert or update stats
+  var statlinesUpserted = 0
   for (let index = 0; index < playerStats.length; index++) {
+    // console.log('find player for id: ' + playerStats[index].gsisId)
     const player = await Player.findOne({ gsisId: playerStats[index].gsisId })
     if (player != undefined) {
       let fantasyPoints = 0.0
@@ -632,23 +638,20 @@ exports.statlinesFromGame = async game => {
       }
       stats.fantasyPoints = Math.round(fantasyPoints * 100) / 100
 
+      // console.log('run update for: ' + player.displayName)
       await Statline.findOneAndUpdate(
         {
-          gsisId: playerStats[index].gsisId,
           week: playerStats[index].week,
-          player: player._id,
-          position: player.position
+          player: player._id
         },
         stats,
         { upsert: true, new: true, setDefaultsOnInsert: true }
       )
-    } else {
-      const undefinedPlayer = playerStats[index]
-      console.log('PLAYER UNDEFINED', { undefinedPlayer })
+      ++statlinesUpserted
     }
   }
 
-  return playerStats.length
+  return statlinesUpserted
 }
 
 setupTeamDefense = (game, thisSideString) => {
