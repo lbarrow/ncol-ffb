@@ -9,6 +9,7 @@ const Statline = mongoose.model('Statline')
 const Matchup = mongoose.model('Matchup')
 
 exports.getCurrentGameData = async () => {
+  console.log('getCurrentGameData called')
   const week = getCurrentWeek.getCurrentWeek()
   const games = await Game.find({
     isoTime: {
@@ -637,14 +638,14 @@ exports.statlinesFromGame = async game => {
       await Player.findOne({
         gsisId: playerStats[index].gsisId
       })
-      // await Statline.findOneAndUpdate(
-      //   {
-      //     week: playerStats[index].week,
-      //     gsisId: playerStats[index].gsisId
-      //   },
-      //   stats,
-      //   { upsert: true, new: true, setDefaultsOnInsert: true }
-      // )
+      await Statline.findOneAndUpdate(
+        {
+          week: playerStats[index].week,
+          gsisId: playerStats[index].gsisId
+        },
+        stats,
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      )
       ++statlinesUpserted
     }
   }
