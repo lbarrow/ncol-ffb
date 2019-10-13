@@ -562,86 +562,88 @@ exports.statlinesFromGame = async game => {
   // insert or update stats
   var statlinesUpserted = 0
   for (let index = 0; index < playerStats.length; index++) {
-    let fantasyPoints = 0.0
-    let stats = playerStats[index]
-    if (stats.hasOwnProperty('pointsAllowed')) {
-      fantasyPoints += stats.sacks
-      fantasyPoints += stats.fumbles * 2
-      fantasyPoints += stats.ints * 2
-      fantasyPoints += stats.safeties * 2
-      fantasyPoints += stats.TDs * 6
-      if (stats.pointsAllowed == 0) {
-        fantasyPoints += 10
-      }
-      if (stats.pointsAllowed > 0 && stats.pointsAllowed <= 6) {
-        fantasyPoints += 7
-      }
-      if (stats.pointsAllowed > 6 && stats.pointsAllowed <= 20) {
-        fantasyPoints += 4
-      }
-      if (stats.pointsAllowed > 20 && stats.pointsAllowed <= 29) {
-        fantasyPoints += 1
-      }
-      if (stats.pointsAllowed > 29) {
-        fantasyPoints -= 3
-      }
-    } else {
-      if (stats.passingAttempts) {
-        fantasyPoints += stats.passingYards / 25
-        fantasyPoints += stats.passingInts * -2
-        fantasyPoints += stats.passingTDs * 6
-        fantasyPoints += stats.passingTwoPts * 2
-        if (stats.passingYards >= 300) {
+    const player = await Player.findOne({ gsisId: playerStats[index].gsisId })
+    if (player != undefined) {
+      let fantasyPoints = 0.0
+      let stats = playerStats[index]
+      if (stats.hasOwnProperty('pointsAllowed')) {
+        fantasyPoints += stats.sacks
+        fantasyPoints += stats.fumbles * 2
+        fantasyPoints += stats.ints * 2
+        fantasyPoints += stats.safeties * 2
+        fantasyPoints += stats.TDs * 6
+        if (stats.pointsAllowed == 0) {
+          fantasyPoints += 10
+        }
+        if (stats.pointsAllowed > 0 && stats.pointsAllowed <= 6) {
+          fantasyPoints += 7
+        }
+        if (stats.pointsAllowed > 6 && stats.pointsAllowed <= 20) {
+          fantasyPoints += 4
+        }
+        if (stats.pointsAllowed > 20 && stats.pointsAllowed <= 29) {
           fantasyPoints += 1
         }
-        if (stats.passingYards >= 400) {
-          fantasyPoints += 2
+        if (stats.pointsAllowed > 29) {
+          fantasyPoints -= 3
         }
-        if (stats.passingYards >= 500) {
-          fantasyPoints += 3
+      } else {
+        if (stats.passingAttempts) {
+          fantasyPoints += stats.passingYards / 25
+          fantasyPoints += stats.passingInts * -2
+          fantasyPoints += stats.passingTDs * 6
+          fantasyPoints += stats.passingTwoPts * 2
+          if (stats.passingYards >= 300) {
+            fantasyPoints += 1
+          }
+          if (stats.passingYards >= 400) {
+            fantasyPoints += 2
+          }
+          if (stats.passingYards >= 500) {
+            fantasyPoints += 3
+          }
+        }
+        if (stats.rushingAttempts) {
+          fantasyPoints += stats.rushingYards / 10
+          fantasyPoints += stats.rushingTDs * 6
+          fantasyPoints += stats.rushingTwoPts * 2
+          if (stats.rushingYards >= 100) {
+            fantasyPoints += 2
+          }
+          if (stats.rushingYards >= 150) {
+            fantasyPoints += 3
+          }
+          if (stats.rushingYards >= 200) {
+            fantasyPoints += 4
+          }
+        }
+        if (stats.receivingReceptions) {
+          fantasyPoints += stats.receivingReceptions
+          fantasyPoints += stats.receivingYards / 10
+          fantasyPoints += stats.receivingTDs * 6
+          fantasyPoints += stats.receivingTwoPts * 2
+          if (stats.receivingYards >= 100) {
+            fantasyPoints += 2
+          }
+          if (stats.receivingYards >= 150) {
+            fantasyPoints += 3
+          }
+          if (stats.receivingYards >= 200) {
+            fantasyPoints += 4
+          }
+        }
+        if (stats.fumbles) {
+          fantasyPoints += stats.fumbles * -2
         }
       }
-      if (stats.rushingAttempts) {
-        fantasyPoints += stats.rushingYards / 10
-        fantasyPoints += stats.rushingTDs * 6
-        fantasyPoints += stats.rushingTwoPts * 2
-        if (stats.rushingYards >= 100) {
-          fantasyPoints += 2
-        }
-        if (stats.rushingYards >= 150) {
-          fantasyPoints += 3
-        }
-        if (stats.rushingYards >= 200) {
-          fantasyPoints += 4
-        }
-      }
-      if (stats.receivingReceptions) {
-        fantasyPoints += stats.receivingReceptions
-        fantasyPoints += stats.receivingYards / 10
-        fantasyPoints += stats.receivingTDs * 6
-        fantasyPoints += stats.receivingTwoPts * 2
-        if (stats.receivingYards >= 100) {
-          fantasyPoints += 2
-        }
-        if (stats.receivingYards >= 150) {
-          fantasyPoints += 3
-        }
-        if (stats.receivingYards >= 200) {
-          fantasyPoints += 4
-        }
-      }
-      if (stats.fumbles) {
-        fantasyPoints += stats.fumbles * -2
-      }
+      stats.player = player._id
       stats.fantasyPoints = Math.round(fantasyPoints * 100) / 100
-      // console.log('run update for: ' + player.displayName)
-      await Player.findOne({
-        gsisId: playerStats[index].gsisId
-      })
       await Statline.findOneAndUpdate(
         {
+          gsisId: playerStats[index].gsisId,
           week: playerStats[index].week,
-          gsisId: playerStats[index].gsisId
+          player: player._id,
+          position: player.position
         },
         stats,
         { upsert: true, new: true, setDefaultsOnInsert: true }

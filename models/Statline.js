@@ -43,4 +43,12 @@ const statlineSchema = new mongoose.Schema(
 
 statlineSchema.index({ week: 1, gsisId: 1 })
 
+function autopopulate(next) {
+  this.populate('player')
+  next()
+}
+
+statlineSchema.pre('find', autopopulate)
+statlineSchema.pre('findOne', autopopulate)
+
 module.exports = mongoose.model('Statline', statlineSchema)
