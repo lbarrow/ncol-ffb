@@ -1,0 +1,67 @@
+CREATE TABLE team(
+	id serial PRIMARY KEY,
+	season VARCHAR (50) NOT NULL,
+	teamId VARCHAR (50) NOT NULL,
+	abbr VARCHAR (50) NOT NULL,
+	cityState VARCHAR (50) NOT NULL,
+	fullName VARCHAR (50) NOT NULL,
+	nick VARCHAR (50) NOT NULL,
+	teamType VARCHAR (50) NOT NULL,
+	conferenceAbbr VARCHAR (50) NOT NULL,
+	divisionAbbr VARCHAR (50) NOT NULL,
+	stadiumName VARCHAR (50) NOT NULL
+);
+
+CREATE TABLE player(
+	id serial PRIMARY KEY,
+    season INT,
+    nflId INT,
+    status VARCHAR (50) NOT NULL,
+    displayName VARCHAR (50) NOT NULL,
+    firstName VARCHAR (50) NOT NULL,
+    lastName VARCHAR (50) NOT NULL,
+    esbId VARCHAR (50) NOT NULL,
+    gsisId VARCHAR (50) NOT NULL,
+    middleName VARCHAR (50) NOT NULL,
+    birthDate VARCHAR (50) NOT NULL,
+    homeTown VARCHAR (50) NOT NULL,
+    collegeId INT,
+    collegeName VARCHAR (50) NOT NULL,
+    positionGroup VARCHAR (50) NOT NULL,
+    position VARCHAR (50) NOT NULL,
+    jerseyNumber INT,
+    height VARCHAR (50) NOT NULL,
+    weight INT,
+    yearsOfExperience INT,
+    teamAbbr VARCHAR (50) NOT NULL,
+    teamSeq INT,
+    teamId VARCHAR (50) NOT NULL,
+    teamFullName VARCHAR (50) NOT NULL,
+    fantasyOwner VARCHAR (50)
+);
+
+CREATE TABLE owner(
+	id serial PRIMARY KEY,
+    ownerId VARCHAR (50) NOT NULL,
+	displayName VARCHAR (50) NOT NULL,
+	wins INT,
+	losses INT,
+	pointsFor REAL,
+	pointsAgainst REAL,
+	streak VARCHAR (50)
+);
+
+CREATE TABLE matchup(
+	id serial PRIMARY KEY,
+  week INT NOT NULL,
+  home VARCHAR (50) NOT NULL,
+  homeScore REAL,
+  homePlayersLeft INT,
+  homePlayersPlaying INT,
+  homePlayersDone INT,
+  away VARCHAR (50) NOT NULL,
+  awayScore REAL,
+  awayPlayersLeft INT,
+  awayPlayersPlaying INT,
+  awayPlayersDone INT
+);

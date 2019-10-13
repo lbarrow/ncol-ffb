@@ -1,10 +1,12 @@
+const path = require('path')
+const downloadImage = require('../utility/downloadImage')
 const axios = require('axios')
 const mongoose = require('mongoose')
-const path = require('path')
 const moment = require('moment')
-const downloadImage = require('../utility/downloadImage')
 const getCurrentWeek = require('../utility/getCurrentWeek')
 const convertToJSON = require('xml-js')
+
+const API_URL = 'http://localhost:4445/'
 
 const {
   getCurrentGameData,
@@ -13,11 +15,10 @@ const {
   statlinesFromGame
 } = require('../utility/dataManager')
 
-const Team = mongoose.model('Team')
-const Player = mongoose.model('Player')
 const Game = mongoose.model('Game')
 const Matchup = mongoose.model('Matchup')
 const Owner = mongoose.model('Owner')
+const db = require('../db')
 
 exports.index = async (req, res) => {
   res.render('index')
@@ -26,7 +27,7 @@ exports.index = async (req, res) => {
 // store all games in db
 exports.parseSchedule = async (req, res) => {
   const scheduleURL = 'http://www.nfl.com/feeds-rs/schedules/2019'
-  // const scheduleURL = 'http://localhost:4444/schedule.json'
+  // const scheduleURL = API_URL + 'schedule.json'
   const response = await axios({
     method: 'get',
     url: scheduleURL,
@@ -90,13 +91,19 @@ exports.parseSchedule = async (req, res) => {
 
 // setup fantasy team matchups in db from local json schedule
 exports.setupMatchups = async (req, res) => {
-  const matchupsJSONURL = 'http://localhost:4444/matchups.json'
+  const matchupsJSONURL = API_URL + 'matchups.json'
   const response = await axios(matchupsJSONURL)
 
   const matchups = response.data.weeks
 
-  await Matchup.deleteMany({}) // clear out existing matchups
-  await Matchup.insertMany(matchups) // insert matchups
+  await db.query(`DELETE FROM matchup`) // clear out existing records
+  for (let i = 0; i < matchups.length; i++) {
+    const matchup = matchups[i]
+    await db.query(
+      `INSERT INTO matchup (week, home, away) VALUES ($1, $2, $3)`,
+      [matchup.week, matchup.home, matchup.away]
+    )
+  }
 
   res.send(`${matchups.length} matchups setup`)
 }
@@ -289,13 +296,32 @@ parseGames = async (games, startWeek, endWeek) => {
 
 // store all teams in db
 exports.teams = async (req, res) => {
+  await db.query(`DELETE FROM team`) // clear out existing players
   const teamResponse = await axios.get(
     'https://feeds.nfl.com/feeds-rs/teams/2019.json'
   )
   const teams = teamResponse.data.teams
-  await Team.deleteMany({}) // clear out existing teams
-  await Team.insertMany(teams) // insert teams
-  await Team.deleteMany({ teamType: 'PRO' }) // get rid of afc and nfc pro bowl teams
+
+  for (let i = 0; i < teams.length; i++) {
+    const team = teams[i]
+    if (team.teamType !== 'PRO') {
+      await db.query(
+        `INSERT INTO team (season, teamid, abbr, citystate, fullname, nick, teamtype, conferenceabbr, divisionabbr, stadiumname) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [
+          team.season,
+          team.teamId,
+          team.abbr,
+          team.cityState,
+          team.fullName,
+          team.nick,
+          team.teamType,
+          team.conferenceAbbr,
+          team.divisionAbbr,
+          team.stadiumName
+        ]
+      )
+    }
+  }
 
   res.send(`Grabbed all teams`)
 }
@@ -303,82 +329,132 @@ exports.teams = async (req, res) => {
 // store all players in db
 exports.rosters = async (req, res) => {
   // now loop through each team
-  await Player.deleteMany({}) // clear out existing players
-  const teams = await Team.find().sort({ fullName: 'asc' })
+  await db.query(`DELETE FROM player`) // clear out existing players
+  const { rows } = await db.query(`SELECT * FROM team ORDER BY fullname asc`) // get all teams
+  const teams = rows
   let totalPlayers = 0
   for (const team of teams) {
+    // get team json data
     const rosterResponse = await axios.get(
-      `https://feeds.nfl.com/feeds-rs/roster/${team.teamId}.json`
+      `https://feeds.nfl.com/feeds-rs/roster/${team.teamid}.json`
     )
     const roster = rosterResponse.data.teamPlayers
+
+    // insert players for this team
     const playersOnTeam = roster.length
-    await Player.insertMany(roster) // insert players
+    for (let i = 0; i < roster.length; i++) {
+      const player = roster[i]
+      if (player.gsisId) {
+        await db.query(
+          `INSERT INTO player (season,
+                                nflid,
+                                status,
+                                displayname,
+                                firstname,
+                                lastname,
+                                esbid,
+                                gsisid,
+                                middlename,
+                                birthdate,
+                                hometown,
+                                collegeid,
+                                collegename,
+                                positiongroup,
+                                position,
+                                jerseynumber,
+                                height,
+                                weight,
+                                yearsofexperience,
+                                teamabbr,
+                                teamseq,
+                                teamid,
+                                teamFullname)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
+          [
+            player.season,
+            player.nflId,
+            player.status,
+            player.displayName,
+            player.firstName,
+            player.lastName,
+            player.esbId,
+            player.gsisId,
+            player.middleName,
+            player.birthDate,
+            player.homeTown,
+            player.collegeId,
+            player.collegeName,
+            player.positionGroup,
+            player.position,
+            player.jerseyNumber,
+            player.height,
+            player.weight,
+            player.yearsOfExperience,
+            player.teamAbbr,
+            player.teamSeq,
+            player.teamId,
+            player.teamFullName
+          ]
+        )
+      }
+    }
     totalPlayers += playersOnTeam
-    console.log(`added ${playersOnTeam} players to ${team.fullName}`)
+    console.log(`added ${playersOnTeam} players to ${team.fullname}`)
   }
 
   // setup team DS/Ts
   const defenses = teams.map(team => {
+    console.log('team', team)
     return {
       season: 2019,
-      gsisId: 'DST_' + team.teamAbbr,
-      nflId: team.nflId,
+      gsisId: 'DST_' + team.abbr,
       status: 'ACT',
-      displayName: team.fullName,
-      firstName: team.cityState,
+      displayName: team.fullname,
+      firstName: team.citystate,
       lastName: team.nick,
       positionGroup: 'DST',
       position: 'DST',
-      teamAbbr: team.teamAbbr,
-      teamId: team.teamId,
-      teamFullName: team.fullName
+      teamAbbr: team.abbr,
+      teamId: team.teamid,
+      teamFullName: team.fullname
     }
   })
-  await Player.insertMany(defenses)
+  // insert players for this team
+  for (let i = 0; i < defenses.length; i++) {
+    const dstPlayer = defenses[i]
+    console.log('dstPlayer', { dstPlayer })
+    await db.query(
+      `INSERT INTO player (season,
+                            gsisid,
+                            nflid,
+                            status,
+                            displayname,
+                            firstname,
+                            lastname,
+                            positiongroup,
+                            position,
+                            teamabbr,
+                            teamid,
+                            teamfullname)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+      [
+        dstPlayer.season,
+        dstPlayer.gsisId,
+        dstPlayer.nflId,
+        dstPlayer.status,
+        dstPlayer.displayName,
+        dstPlayer.firstName,
+        dstPlayer.lastName,
+        dstPlayer.positionGroup,
+        dstPlayer.position,
+        dstPlayer.teamAbbr,
+        dstPlayer.teamId,
+        dstPlayer.teamFullName
+      ]
+    )
+  }
 
   res.send(`Grabbed all ${totalPlayers} players`)
-}
-
-// download all player headshots to filesystem
-exports.photos = async (req, res) => {
-  const roster = await Player.find({})
-  let photosDownloadedCount = 0
-  let erroredPhotos = []
-  for (const player of roster) {
-    const esbId = player.esbId
-    const imageURL = `http://static.nfl.com/static/content/public/static/img/fantasy/transparent/200x200/${esbId}.png`
-    const localPath = path.resolve(
-      __dirname,
-      '../public/graphics/players/',
-      `${esbId}.png`
-    )
-    try {
-      await downloadImage.download(imageURL, localPath)
-      ++photosDownloadedCount
-    } catch (error) {
-      console.log('errored on ' + imageURL)
-      erroredPhotos.push(player)
-    }
-  }
-  if (erroredPhotos.length) {
-    for (const player of erroredPhotos) {
-      const esbId = player.esbId
-      const imageURL = `http://static.nfl.com/static/content/public/static/img/fantasy/transparent/200x200/${esbId}.png`
-      const localPath = path.resolve(
-        __dirname,
-        '../public/graphics/players/',
-        `${esbId}.png`
-      )
-      try {
-        await downloadImage.download(imageURL, localPath)
-        ++photosDownloadedCount
-      } catch (error) {
-        console.log('second error on ' + imageURL)
-      }
-    }
-  }
-
-  res.send(`${photosDownloadedCount} photos downloaded of ${roster.length}`)
 }
 
 // assign players to owners
@@ -393,15 +469,22 @@ exports.setupFantasyTeams = async (req, res) => {
   ]
 
   // setup owners
-  await Owner.deleteMany({})
-  await Owner.insertMany(fantasyOwners)
+  await db.query(`DELETE FROM owner`) // clear out existing players
+  for (let i = 0; i < fantasyOwners.length; i++) {
+    const fantasyOwner = fantasyOwners[i]
+    await db.query(`INSERT INTO owner (ownerid, displayname) VALUES ($1, $2)`, [
+      fantasyOwner.ownerId,
+      fantasyOwner.displayName
+    ])
+  }
 
   // for each team (bern, nathan, etc)
   //    load json file
   //    iterate through each player, assigning owner to string
+  await db.query(`UPDATE player SET fantasyowner = NULL`)
   for (let i = 0; i < fantasyOwners.length; i++) {
     const result = await axios.get(
-      `http://localhost:4444/rosters/roster_${fantasyOwners[i].ownerId}.json`
+      API_URL + `rosters/roster_${fantasyOwners[i].ownerId}.json`
     )
     const playersToMark = result.data
     for (
@@ -410,26 +493,70 @@ exports.setupFantasyTeams = async (req, res) => {
       playerIndex++
     ) {
       // if defenses, search on gsisId
-      let whereClause = { displayName: playersToMark[playerIndex].name }
       if (playersToMark[playerIndex].position === 'TmD') {
-        whereClause = { gsisId: `DST_${playersToMark[playerIndex].team}` }
-      }
-
-      // mark player as owned
-      const player = await Player.findOneAndUpdate(
-        whereClause,
-        {
-          fantasyOwner: fantasyOwners[i].ownerId
-        },
-        { new: true, setDefaultsOnInsert: true }
-      )
-
-      if (!player) {
-        console.log('unable to find', playersToMark[playerIndex].name)
+        const fakeDSTgsisid = `DST_${playersToMark[playerIndex].team}`
+        await db.query(
+          `UPDATE player
+          SET fantasyowner = $1
+          WHERE gsisId = $2`,
+          [fantasyOwners[i].ownerId, fakeDSTgsisid]
+        )
       } else {
-        // console.log('marked', player.displayName)
+        await db.query(
+          `UPDATE player
+          SET fantasyowner = $1
+          WHERE displayname = $2 AND position = $3 AND teamabbr = $4`,
+          [
+            fantasyOwners[i].ownerId,
+            playersToMark[playerIndex].name,
+            playersToMark[playerIndex].position,
+            playersToMark[playerIndex].team
+          ]
+        )
       }
     }
   }
-  res.send('done updating rosters')
+  res.send('done updating fantasy team rosters')
 }
+
+// download all player headshots to filesystem
+// exports.photos = async (req, res) => {
+//   const roster = await Player.find({})
+//   let photosDownloadedCount = 0
+//   let erroredPhotos = []
+//   for (const player of roster) {
+//     const esbId = player.esbId
+//     const imageURL = `http://static.nfl.com/static/content/public/static/img/fantasy/transparent/200x200/${esbId}.png`
+//     const localPath = path.resolve(
+//       __dirname,
+//       '../public/graphics/players/',
+//       `${esbId}.png`
+//     )
+//     try {
+//       await downloadImage.download(imageURL, localPath)
+//       ++photosDownloadedCount
+//     } catch (error) {
+//       console.log('errored on ' + imageURL)
+//       erroredPhotos.push(player)
+//     }
+//   }
+//   if (erroredPhotos.length) {
+//     for (const player of erroredPhotos) {
+//       const esbId = player.esbId
+//       const imageURL = `http://static.nfl.com/static/content/public/static/img/fantasy/transparent/200x200/${esbId}.png`
+//       const localPath = path.resolve(
+//         __dirname,
+//         '../public/graphics/players/',
+//         `${esbId}.png`
+//       )
+//       try {
+//         await downloadImage.download(imageURL, localPath)
+//         ++photosDownloadedCount
+//       } catch (error) {
+//         console.log('second error on ' + imageURL)
+//       }
+//     }
+//   }
+
+//   res.send(`${photosDownloadedCount} photos downloaded of ${roster.length}`)
+// }
