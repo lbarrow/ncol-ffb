@@ -41,4 +41,6 @@ const statlineSchema = new mongoose.Schema(
   }
 )
 
+statlineSchema.index({ week: 1, gsisId: 1 })
+
 module.exports = mongoose.model('Statline', statlineSchema)
