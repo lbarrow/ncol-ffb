@@ -318,16 +318,19 @@ exports.parseSpecificWeek = async (req, res) => {
 // parse games in this week that have a start time in the past
 exports.parseThisWeek = async (req, res) => {
   const week = getCurrentWeek.getCurrentWeek()
-  const games = await Game.find({
-    week,
-    isoTime: {
-      $gte: moment('2019-09-05T23:10:00.000+00:00').toDate(),
-      $lt: moment().toDate()
-    }
-  })
+  const { rows } = await db.query(`SELECT * FROM game WHERE week = $1`, [week])
+  let games = []
+  games.push(rows[0])
+  // const games = await Game.find({
+  //   week,
+  //   isoTime: {
+  //     $gte: moment('2019-09-05T23:10:00.000+00:00').toDate(),
+  //     $lt: moment().toDate()
+  //   }
+  // })
 
   const parsingResult = await parseGames(games, week, week)
-  res.json(parsingResult)
+  res.json({ games })
 }
 
 // parse games that are either yet to start, in progress
@@ -337,8 +340,7 @@ exports.parseCurrentGames = async (req, res) => {
   res.json(parsingResult)
 }
 
-// parse games that are either yet to start, in progress
-// or have finished but we haven't parsed them since they've finished
+// only update fanasy points for fantasy matchups (don't go grab game data from NFL.com)
 exports.onlyUpdateMatchups = async (req, res) => {
   await updateFantasyPointsForMatchups(1, 16)
   res.send('Done updating matchups')
@@ -350,35 +352,14 @@ parseGames = async (games, startWeek, endWeek) => {
   // parse them all
   let statlinesCount = 0
   for (let i = 0; i < games.length; i++) {
-    const beforeQuery1 = moment()
     await updateStatsForGameFromNFL(games[i])
-    // console.log(
-    //   `done: updateStatesForGameFromNFL ${games[i].awayTeam.teamAbbr} @ ${games[i].homeTeam.teamAbbr}`
-    // )
-    console.log(
-      'updating games with json results took ' +
-        moment().diff(beforeQuery1) +
-        'ms'
-    ) /// 6431 original result
 
-    const beforeQuery2 = moment()
-    const statlinesParsed = await statlinesFromGame(games[i])
-    statlinesCount += statlinesParsed
-    console.log(
-      statlinesParsed +
-        ' statlines by statlinesFromGame took ' +
-        moment().diff(beforeQuery2) +
-        'ms'
-    ) /// 6431 original result
-    // console.log(`${statlinesParsed} statlines for ${games[i].awayTeam.teamAbbr} @ ${games[i].homeTeam.teamAbbr} parsed`)
+    // const statlinesParsed = await statlinesFromGame(games[i])
+    // statlinesCount += statlinesParsed
   }
 
   // update fantasy point totals in matchup collection
-  const beforeQuery3 = moment()
-  await updateFantasyPointsForMatchups(startWeek, endWeek)
-  console.log(
-    'updateFantasyPointsForMatchups took ' + moment().diff(beforeQuery3) + 'ms'
-  ) /// 6431 original result
+  // await updateFantasyPointsForMatchups(startWeek, endWeek)
 
   return {
     statlinesCount,

@@ -2,6 +2,7 @@ const axios = require('axios')
 const mongoose = require('mongoose')
 const getCurrentWeek = require('../utility/getCurrentWeek')
 const moment = require('moment')
+const db = require('../db')
 
 const Game = mongoose.model('Game')
 const Player = mongoose.model('Player')
@@ -226,306 +227,109 @@ totalPointsForTeamWeek = async (fantasyTeamId, week) => {
 }
 
 exports.updateStatsForGameFromNFL = async game => {
-  const gameId = game.gameId
-  const teamResponse = await axios.get(
-    `http://www.nfl.com/liveupdate/game-center/${gameId}/${gameId}_gtd.json`
-  )
-  // const gameId = '2019090801'
-  // const teamResponse = await axios.get('http://localhost:4444/game2.json')
+  // const gameId = game.gameId
+  // const teamResponse = await axios.get(
+  //   `http://www.nfl.com/liveupdate/game-center/${gameId}/${gameId}_gtd.json`
+  // )
+  const gameId = '2019090801'
+  const teamResponse = await axios.get('http://localhost:4445/game2.json')
   const gameStatsData = teamResponse.data[gameId]
 
   // update game first
-  game.yardline = gameStatsData.yl
-  game.quarter = gameStatsData.qtr
-  game.down = gameStatsData.down
-  game.yardsToGo = gameStatsData.togo
-  game.clock = gameStatsData.clock
-  game.possessingTeamAbbr = gameStatsData.posteam
-  game.redzone = gameStatsData.redzone
-  game.homeTeam.timeouts = gameStatsData.home.to
-  game.homeTeam.score.quarter1 = gameStatsData.home.score['1']
-  game.homeTeam.score.quarter2 = gameStatsData.home.score['2']
-  game.homeTeam.score.quarter3 = gameStatsData.home.score['3']
-  game.homeTeam.score.quarter4 = gameStatsData.home.score['4']
-  game.homeTeam.score.overtime = gameStatsData.home.score['5']
-  game.homeTeam.score.current = gameStatsData.home.score['T']
-  game.homeTeam.totalFirstDowns = gameStatsData.home.stats.team.totfd
-  game.homeTeam.totalYards = gameStatsData.home.stats.team.totyds
-  game.homeTeam.passingYards = gameStatsData.home.stats.team.pyrds
-  game.homeTeam.receivingYards = gameStatsData.home.stats.team.ryrds
-  game.homeTeam.penalties = gameStatsData.home.stats.team.pen
-  game.homeTeam.penaltyYards = gameStatsData.home.stats.team.penyds
-  game.homeTeam.turnovers = gameStatsData.home.stats.team.trnovr
-  game.homeTeam.punt = gameStatsData.home.stats.team.pt
-  game.homeTeam.puntyds = gameStatsData.home.stats.team.ptyds
-  game.homeTeam.puntavg = gameStatsData.home.stats.team.ptavg
-  game.homeTeam.timeOfPossession = gameStatsData.home.stats.team.top
-  game.awayTeam.timeouts = gameStatsData.away.to
-  game.awayTeam.score.quarter1 = gameStatsData.away.score['1']
-  game.awayTeam.score.quarter2 = gameStatsData.away.score['2']
-  game.awayTeam.score.quarter3 = gameStatsData.away.score['3']
-  game.awayTeam.score.quarter4 = gameStatsData.away.score['4']
-  game.awayTeam.score.overtime = gameStatsData.away.score['5']
-  game.awayTeam.score.current = gameStatsData.away.score['T']
-  game.awayTeam.totalFirstDowns = gameStatsData.away.stats.team.totfd
-  game.awayTeam.totalYards = gameStatsData.away.stats.team.totyds
-  game.awayTeam.passingYards = gameStatsData.away.stats.team.pyrds
-  game.awayTeam.receivingYards = gameStatsData.away.stats.team.ryrds
-  game.awayTeam.penalties = gameStatsData.away.stats.team.pen
-  game.awayTeam.penaltyYards = gameStatsData.away.stats.team.penyds
-  game.awayTeam.turnovers = gameStatsData.away.stats.team.trnovr
-  game.awayTeam.punt = gameStatsData.away.stats.team.pt
-  game.awayTeam.puntyds = gameStatsData.away.stats.team.ptyds
-  game.awayTeam.puntavg = gameStatsData.away.stats.team.ptavg
-  game.awayTeam.timeOfPossession = gameStatsData.away.stats.team.top
-
-  const teamTypes = ['home', 'away']
-  for (let i = 0; i < teamTypes.length; i++) {
-    const passingPlayers = gameStatsData[teamTypes[i]].stats.passing
-    if (passingPlayers) {
-      game[teamTypes[i] + 'Team'].passing = []
-      for (const gsisId in passingPlayers) {
-        if (passingPlayers.hasOwnProperty(gsisId)) {
-          let player = passingPlayers[gsisId]
-          game[teamTypes[i] + 'Team'].passing.push({
-            gsisId,
-            nameAbbr: player.name,
-            attempts: player.att,
-            completions: player.cmp,
-            yards: player.yds,
-            touchdowns: player.tds,
-            interceptions: player.ints,
-            twoPointsAttempted: player.twopta,
-            twoPointsMade: player.twoptm
-          })
-        }
-      }
-    }
-    const rushingPlayers = gameStatsData[teamTypes[i]].stats.rushing
-    if (rushingPlayers) {
-      game[teamTypes[i] + 'Team'].rushing = []
-      for (const gsisId in rushingPlayers) {
-        if (rushingPlayers.hasOwnProperty(gsisId)) {
-          let player = rushingPlayers[gsisId]
-          game[teamTypes[i] + 'Team'].rushing.push({
-            gsisId,
-            nameAbbr: player.name,
-            attempts: player.att,
-            yards: player.yds,
-            touchdowns: player.tds,
-            long: player.lng,
-            longTouchdown: player.lngtd,
-            twoPointsAttempted: player.twopta,
-            twoPointsMade: player.twoptm
-          })
-        }
-      }
-    }
-    const receivingPlayers = gameStatsData[teamTypes[i]].stats.receiving
-    if (receivingPlayers) {
-      game[teamTypes[i] + 'Team'].receiving = []
-      for (const gsisId in receivingPlayers) {
-        if (receivingPlayers.hasOwnProperty(gsisId)) {
-          let player = receivingPlayers[gsisId]
-          game[teamTypes[i] + 'Team'].receiving.push({
-            gsisId,
-            nameAbbr: player.name,
-            receptions: player.rec,
-            yards: player.yds,
-            touchdowns: player.tds,
-            long: player.lng,
-            longTouchdown: player.lngtd,
-            twoPointsAttempted: player.twopta,
-            twoPointsMade: player.twoptm
-          })
-        }
-      }
-    }
-    const fumblesPlayers = gameStatsData[teamTypes[i]].stats.fumbles
-    if (fumblesPlayers) {
-      game[teamTypes[i] + 'Team'].fumbles = []
-      for (const gsisId in fumblesPlayers) {
-        if (fumblesPlayers.hasOwnProperty(gsisId)) {
-          let player = fumblesPlayers[gsisId]
-          game[teamTypes[i] + 'Team'].fumbles.push({
-            gsisId,
-            nameAbbr: player.name,
-            total: player.tot,
-            recovered: player.rcv,
-            teamRecovered: player.trcv,
-            yards: player.yds,
-            lost: player.lost
-          })
-        }
-      }
-    }
-    const kickingPlayers = gameStatsData[teamTypes[i]].stats.kicking
-    if (kickingPlayers) {
-      game[teamTypes[i] + 'Team'].kicking = []
-      for (const gsisId in kickingPlayers) {
-        if (kickingPlayers.hasOwnProperty(gsisId)) {
-          let player = kickingPlayers[gsisId]
-          game[teamTypes[i] + 'Team'].kicking.push({
-            gsisId,
-            nameAbbr: player.name,
-            fieldGoalsAttempted: player.fgm,
-            fieldGoalsMade: player.fga,
-            fieldGoalYards: player.fgyds,
-            totalPointsFromFieldGoals: player.totpfg,
-            extraPointsAttempted: player.xpmade,
-            extraPointsMade: player.xpmissed,
-            extraPointsMissed: player.xpa,
-            extraPointsBlocked: player.xpb,
-            extraPointsTotal: player.xptot
-          })
-        }
-      }
-    }
-    const puntingPlayers = gameStatsData[teamTypes[i]].stats.punting
-    if (puntingPlayers) {
-      game[teamTypes[i] + 'Team'].punting = []
-      for (const gsisId in puntingPlayers) {
-        if (puntingPlayers.hasOwnProperty(gsisId)) {
-          let player = puntingPlayers[gsisId]
-          game[teamTypes[i] + 'Team'].punting.push({
-            gsisId,
-            nameAbbr: player.name,
-            punts: player.pts,
-            yards: player.yds,
-            average: player.avg,
-            recoveredWithinThe20: player.i20,
-            long: player.lng
-          })
-        }
-      }
-    }
-    const kickReturningPlayers = gameStatsData[teamTypes[i]].stats.kickret
-    if (kickReturningPlayers) {
-      game[teamTypes[i] + 'Team'].kickReturning = []
-      for (const gsisId in kickReturningPlayers) {
-        if (kickReturningPlayers.hasOwnProperty(gsisId)) {
-          let player = kickReturningPlayers[gsisId]
-          game[teamTypes[i] + 'Team'].kickReturning.push({
-            gsisId,
-            nameAbbr: player.name,
-            returns: player.ret,
-            average: player.avg,
-            touchdowns: player.tds,
-            long: player.lng,
-            longTouchdown: player.lngtd
-          })
-        }
-      }
-    }
-    const puntReturningPlayers = gameStatsData[teamTypes[i]].stats.puntret
-    if (puntReturningPlayers) {
-      game[teamTypes[i] + 'Team'].puntReturning = []
-      for (const gsisId in puntReturningPlayers) {
-        if (puntReturningPlayers.hasOwnProperty(gsisId)) {
-          let player = puntReturningPlayers[gsisId]
-          game[teamTypes[i] + 'Team'].puntReturning.push({
-            gsisId,
-            nameAbbr: player.name,
-            returns: player.ret,
-            average: player.avg,
-            touchdowns: player.tds,
-            long: player.lng,
-            longTouchdown: player.lngtd
-          })
-        }
-      }
-    }
-    const defensePlayers = gameStatsData[teamTypes[i]].stats.defense
-    if (defensePlayers) {
-      game[teamTypes[i] + 'Team'].defense = []
-      for (const gsisId in defensePlayers) {
-        if (defensePlayers.hasOwnProperty(gsisId)) {
-          let player = defensePlayers[gsisId]
-          game[teamTypes[i] + 'Team'].defense.push({
-            gsisId,
-            nameAbbr: player.name,
-            tackles: player.tkl,
-            assists: player.ast,
-            sacks: player.sk,
-            interceptions: player.int,
-            forcedFumbles: player.ffum
-          })
-        }
-      }
-    }
-  }
-
-  const scoringSummaries = gameStatsData.scrsummary
-  if (scoringSummaries) {
-    game.scoreSummaries = []
-    for (const scoringId in scoringSummaries) {
-      if (scoringSummaries.hasOwnProperty(scoringId)) {
-        let scoringSummary = scoringSummaries[scoringId]
-        game.scoreSummaries.push({
-          scoringType: scoringSummary.type,
-          description: scoringSummary.desc,
-          quarter: scoringSummary.qtr,
-          teamAbbr: scoringSummary.team
-        })
-      }
-    }
-  }
-
-  // const driveSummaries = gameStatsData.drives
-  // if (driveSummaries) {
-  //   game.drives = []
-  //   for (const driveId in driveSummaries) {
-  //     if (driveId !== 'crntdrv') {
-  //       if (driveSummaries.hasOwnProperty(driveId)) {
-  //         let driveSummary = driveSummaries[driveId]
-  //         let plays = []
-  //         const playList = driveSummary.plays
-  //         for (const playId in playList) {
-  //           if (playList.hasOwnProperty(playId)) {
-  //             let play = playList[playId]
-  //             plays.push({
-  //               quarter: play.qtr,
-  //               down: play.down,
-  //               time: play.time,
-  //               yardline: play.yrdln,
-  //               yardsToGo: play.ydstogo,
-  //               netYards: play.ydsnet,
-  //               possessingTeamAbbr: play.posteam,
-  //               description: play.desc,
-  //               note: play.note
-  //             })
-  //           }
-  //         }
-
-  //         game.drives.push({
-  //           possessingTeamAbbr: driveSummary.posteam,
-  //           quarter: driveSummary.qtr,
-  //           redzone: driveSummary.redzone,
-  //           firstDowns: driveSummary.fds,
-  //           result: driveSummary.result,
-  //           penaltyYards: driveSummary.penyds,
-  //           yardsGained: driveSummary.ydsgained,
-  //           numberOfPlays: driveSummary.numplays,
-  //           possessionTime: driveSummary.postime,
-  //           start: {
-  //             quarter: driveSummary.start.qtr,
-  //             time: driveSummary.start.time,
-  //             yardline: driveSummary.start.yrdln,
-  //             teamAbbr: driveSummary.start.team
-  //           },
-  //           end: {
-  //             quarter: driveSummary.end.qtr,
-  //             time: driveSummary.end.time,
-  //             yardline: driveSummary.end.yrdln,
-  //             teamAbbr: driveSummary.end.team
-  //           },
-  //           plays
-  //         })
-  //       }
-  //     }
-  //   }
-  // }
-  game.save()
+  await db.query(
+    `UPDATE game
+    SET
+      yardline = $1,
+      quarter = $2,
+      down = $3,
+      yardstogo = $4,
+      clock = $5,
+      possessingteamabbr = $6,
+      redzone = $7,
+      home_timeouts = $8,
+      home_totalfirstdowns = $9,
+      home_totalyards = $10,
+      home_passingyards = $11,
+      home_rushingyards = $12,
+      home_penalties = $13,
+      home_penaltyyards = $14,
+      home_turnovers = $15,
+      home_punt = $16,
+      home_puntyds = $17,
+      home_puntavg = $18,
+      home_timeofpossession = $19,
+      home_scorequarter1 = $20,
+      home_scorequarter2 = $21,
+      home_scorequarter3 = $22,
+      home_scorequarter4 = $23,
+      home_scoreovertime = $24,
+      home_scorecurrent = $25,
+      away_timeouts = $26,
+      away_totalfirstdowns = $27,
+      away_totalyards = $28,
+      away_passingyards = $29,
+      away_rushingyards = $30,
+      away_penalties = $31,
+      away_penaltyyards = $32,
+      away_turnovers = $33,
+      away_punt = $34,
+      away_puntyds = $35,
+      away_puntavg = $36,
+      away_timeofpossession = $37,
+      away_scorequarter1 = $38,
+      away_scorequarter2 = $39,
+      away_scorequarter3 = $40,
+      away_scorequarter4 = $41,
+      away_scoreovertime = $42,
+      away_scorecurrent = $43
+    WHERE gameid = $44`,
+    [
+      gameStatsData.yl,
+      gameStatsData.qtr,
+      gameStatsData.down,
+      gameStatsData.togo,
+      gameStatsData.clock,
+      gameStatsData.posteam,
+      gameStatsData.redzone,
+      gameStatsData.home.to,
+      gameStatsData.home.stats.team.totfd,
+      gameStatsData.home.stats.team.totyds,
+      gameStatsData.home.stats.team.pyrds,
+      gameStatsData.home.stats.team.ryrds,
+      gameStatsData.home.stats.team.pen,
+      gameStatsData.home.stats.team.penyds,
+      gameStatsData.home.stats.team.trnovr,
+      gameStatsData.home.stats.team.pt,
+      gameStatsData.home.stats.team.ptyds,
+      gameStatsData.home.stats.team.ptavg,
+      gameStatsData.home.stats.team.top,
+      gameStatsData.home.score['1'],
+      gameStatsData.home.score['2'],
+      gameStatsData.home.score['3'],
+      gameStatsData.home.score['4'],
+      gameStatsData.home.score['5'],
+      gameStatsData.home.score['T'],
+      gameStatsData.away.to,
+      gameStatsData.away.stats.team.totfd,
+      gameStatsData.away.stats.team.totyds,
+      gameStatsData.away.stats.team.pyrds,
+      gameStatsData.away.stats.team.ryrds,
+      gameStatsData.away.stats.team.pen,
+      gameStatsData.away.stats.team.penyds,
+      gameStatsData.away.stats.team.trnovr,
+      gameStatsData.away.stats.team.pt,
+      gameStatsData.away.stats.team.ptyds,
+      gameStatsData.away.stats.team.ptavg,
+      gameStatsData.away.stats.team.top,
+      gameStatsData.away.score['1'],
+      gameStatsData.away.score['2'],
+      gameStatsData.away.score['3'],
+      gameStatsData.away.score['4'],
+      gameStatsData.away.score['5'],
+      gameStatsData.away.score['T'],
+      gameId
+    ]
+  )
 }
 
 exports.statlinesFromGame = async game => {
