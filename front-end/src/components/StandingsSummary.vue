@@ -1,9 +1,9 @@
 <template lang="pug">
   ol.standings-mini
     li.standings-mini__item(v-for="team in teams")
-      router-link.standings-mini__link(:to="'/team/' + team.ownerId")
-        .standings-mini__photo(:class="'owner-photo--' + team.ownerId")
-        .standings-mini__name {{ team.displayName }}
+      router-link.standings-mini__link(:to="'/team/' + team.ownerid")
+        .standings-mini__photo(:class="'owner-photo--' + team.ownerid")
+        .standings-mini__name {{ team.displayname }}
         .standings-mini__record {{team.wins}}-{{team.losses}}
         .standings-mini__streak {{team.streak}}
 </template>

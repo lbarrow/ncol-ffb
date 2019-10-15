@@ -1,20 +1,20 @@
 <template lang="pug">
   ul.matchup-previews
     li.matchup-preview(v-for="matchup in matchups" :class="{ 'matchup-preview--expanded': expanded }")
-      router-link.matchup-preview__link(:to="'/matchup/' + matchup._id")
+      router-link.matchup-preview__link(:to="'/matchup/' + matchup.id")
         .matchup-preview__player.matchup-preview__player--first
-          .matchup-preview__photo(:class="'owner-photo--' + matchup.home")
+          .matchup-preview__photo(:class="'owner-photo--' + matchup.home_owner_ownerid")
           .matchup-preview__name
-            .matchup-preview__display-name {{ matchup.homeOwner.displayName }}
-            .matchup-preview__record {{ matchup.homeOwner.wins }}-{{ matchup.homeOwner.losses }}
-            .matchup-preview__points(v-html="teamFantasyPoints(matchup.homeScore)")
+            .matchup-preview__display-name {{ matchup.home_owner_displayname }}
+            .matchup-preview__record {{ matchup.home_owner_wins }}-{{ matchup.home_owner_losses }}
+            .matchup-preview__points(v-html="teamFantasyPoints(matchup.homescore)")
         .matchup-preview__vs vs
         .matchup-preview__player.matchup-preview__player--second
-          .matchup-preview__photo(:class="'owner-photo--' + matchup.away")
+          .matchup-preview__photo(:class="'owner-photo--' + matchup.away_owner_ownerid")
           .matchup-preview__name
-            .matchup-preview__display-name {{ matchup.awayOwner.displayName }}
-            .matchup-preview__record {{ matchup.awayOwner.wins }}-{{ matchup.awayOwner.losses }}
-            .matchup-preview__points(v-html="teamFantasyPoints(matchup.awayScore)")
+            .matchup-preview__display-name {{ matchup.away_owner_displayname }}
+            .matchup-preview__record {{ matchup.away_owner_wins }}-{{ matchup.away_owner_losses }}
+            .matchup-preview__points(v-html="teamFantasyPoints(matchup.awayscore)")
 </template>
 
 <script>

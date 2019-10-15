@@ -16,18 +16,18 @@
             th.standings-expanded__streak-th Streak
             th.standings-expanded__history-th History
         tbody
-          tr.standings-expanded__row(v-for="team in teams" @click="teamClicked(team.ownerId)")
+          tr.standings-expanded__row(v-for="team in teams" @click="teamClicked(team.ownerid)")
             td(data-cell-label="team").standings-expanded__team
               .standings-expanded__team-content
-                .standings-expanded__photo(:class="'owner-photo--' + team.ownerId")
-                .standings-expanded__name {{ team.displayName }}
+                .standings-expanded__photo(:class="'owner-photo--' + team.ownerid")
+                .standings-expanded__name {{ team.displayname }}
             td.standings-expanded__record(data-cell-label="Record") {{ team.wins }}-{{ team.losses }}
-            td.standings-expanded__amount(data-cell-label="Points For" v-html="formatScore(team.pointsFor)")
-            td.standings-expanded__amount(data-cell-label="Points Against" v-html="formatScore(team.pointsAgainst)")
+            td.standings-expanded__amount(data-cell-label="Points For" v-html="formatScore(team.pointsfor)")
+            td.standings-expanded__amount(data-cell-label="Points Against" v-html="formatScore(team.pointsagainst)")
             td.standings-expanded__streak(data-cell-label="Streak") {{ team.streak }}
             td.standings-expanded__history(data-cell-label="History")
               .standings-expanded__history-content
-                span.standings-expanded__result(v-for="result in team.resultHistory" :class="'standings-expanded__result--' + result") {{ result }}
+                span.standings-expanded__result(v-for="result in turnHistoryToArray(team.result_history)" :class="'standings-expanded__result--' + result") {{ result }}
 </template>
 
 <script>
@@ -44,6 +44,9 @@ export default {
     this.teams = result.data
   },
   methods: {
+    turnHistoryToArray(historyString) {
+      return historyString.split(',')
+    },
     formatScore(score) {
       return scoreFormatter(score)
     },

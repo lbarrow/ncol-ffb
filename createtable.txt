@@ -42,7 +42,7 @@ CREATE TABLE player(
 
 CREATE TABLE owner(
 	id serial PRIMARY KEY,
-    ownerId VARCHAR (50) NOT NULL,
+  ownerId VARCHAR (50) NOT NULL,
 	displayName VARCHAR (50) NOT NULL,
 	wins INT,
 	losses INT,
@@ -132,3 +132,35 @@ CREATE TABLE game(
     away_scoreovertime INT,
     away_scorecurrent INT
 );
+
+CREATE TABLE statline(
+  	id serial PRIMARY KEY,
+    playerid INT REFERENCES player,
+    name VARCHAR (50),
+    gameId VARCHAR (50),
+    week INT,
+    position VARCHAR (50),
+    passingAttempts INT,
+    passingCompletions INT,
+    passingYards INT,
+    passingTDs INT,
+    passingInts INT,
+    passingTwoPts INT,
+    rushingAttempts INT,
+    rushingYards INT,
+    rushingTDs INT,
+    rushingTwoPts INT,
+    receivingReceptions INT,
+    receivingYards INT,
+    receivingTDs INT,
+    receivingTwoPts INT,
+    fumbleslost INT,
+    dst_sacks INT,
+    dst_ints INT,
+    dst_safeties INT,
+    dst_fumbles INT,
+    dst_tds INT,
+    dst_pointsAllowed INT,
+    fantasyPoints INT
+);
+

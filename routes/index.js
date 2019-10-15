@@ -19,7 +19,6 @@ router.get('/setup/rosters', setupController.rosters)
 // router.get('/setup/photos', setupController.photos)
 router.get('/setup/fantasy-teams', setupController.setupFantasyTeams)
 router.get('/setup/update-records', setupController.updateFantasyTeamRecords)
-router.get('/setup/update-matchups', setupController.onlyUpdateMatchups)
 
 // router.get('/team/nfl-schedule', teamController.nflSchedule)
 // router.get('/team/stats', teamController.stats)

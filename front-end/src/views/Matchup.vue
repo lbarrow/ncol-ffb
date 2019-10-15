@@ -7,12 +7,12 @@
       //- .change-messages
       //-   div(v-for="message in changeMessages") {{ message }}
     .matchup
-      .matchup-team(v-for="team in teams" :key="team.owner.ownerId")
+      .matchup-team(v-for="team in teams" :key="team.owner.ownerid")
         .matchup-team__header
           matchup-header(:owner="team.owner"
             :total="team.teamTotal"
-            :playersLeft="playersLeft(team.owner.ownerId)"
-            :playersPlaying="playersPlaying(team.owner.ownerId)")
+            :playersLeft="playersLeft(team.owner.ownerid)"
+            :playersPlaying="playersPlaying(team.owner.ownerid)")
         ul.matchup-positions
           li.matchup-position(v-for="position in team.positions" :key="position._id")
             h3.matchup-position__title {{position._id}}s
@@ -60,17 +60,17 @@ export default {
     showPlayerChangeMessage(changeMessage) {
       this.changeMessages.unshift(changeMessage)
     },
-    isTeamHomeOrAway(ownerId) {
-      if (ownerId === this.matchup.away) {
+    isTeamHomeOrAway(ownerid) {
+      if (ownerid === this.matchup.away) {
         return 'away'
       }
       return 'home'
     },
-    playersLeft(ownerId) {
-      return this.matchup[this.isTeamHomeOrAway(ownerId) + 'PlayersLeft']
+    playersLeft(ownerid) {
+      return this.matchup[this.isTeamHomeOrAway(ownerid) + 'PlayersLeft']
     },
-    playersPlaying(ownerId) {
-      return this.matchup[this.isTeamHomeOrAway(ownerId) + 'PlayersPlaying']
+    playersPlaying(ownerid) {
+      return this.matchup[this.isTeamHomeOrAway(ownerid) + 'PlayersPlaying']
     }
   }
 }
