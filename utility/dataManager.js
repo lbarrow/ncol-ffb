@@ -34,8 +34,50 @@ exports.getCurrentGameData = async () => {
     ]
   })
 
-  const parsingResult = await parseGames(games, week, week)
+  const parsingResult = await exports.parseGames(games, week, week)
   return parsingResult
+}
+
+exports.parseGames = async (games, startWeek, endWeek) => {
+  const gamesCount = games.length
+
+  // parse them all
+  let statlinesCount = 0
+  for (let i = 0; i < games.length; i++) {
+    const beforeQuery1 = moment()
+    await updateStatsForGameFromNFL(games[i])
+    // console.log(
+    //   `done: updateStatesForGameFromNFL ${games[i].awayTeam.teamAbbr} @ ${games[i].homeTeam.teamAbbr}`
+    // )
+    console.log(
+      'updating games with json results took ' +
+        moment().diff(beforeQuery1) +
+        'ms'
+    ) /// 6431 original result
+
+    const beforeQuery2 = moment()
+    const statlinesParsed = await statlinesFromGame(games[i])
+    statlinesCount += statlinesParsed
+    console.log(
+      statlinesParsed +
+        ' statlines by statlinesFromGame took ' +
+        moment().diff(beforeQuery2) +
+        'ms'
+    ) /// 6431 original result
+    // console.log(`${statlinesParsed} statlines for ${games[i].awayTeam.teamAbbr} @ ${games[i].homeTeam.teamAbbr} parsed`)
+  }
+
+  // update fantasy point totals in matchup collection
+  const beforeQuery3 = moment()
+  await exports.updateFantasyPointsForMatchups(startWeek, endWeek)
+  console.log(
+    'updateFantasyPointsForMatchups took ' + moment().diff(beforeQuery3) + 'ms'
+  ) /// 6431 original result
+
+  return {
+    statlinesCount,
+    gamesCount
+  }
 }
 
 exports.updateFantasyPointsForMatchups = async (startWeek, endWeek) => {
@@ -226,7 +268,7 @@ totalPointsForTeamWeek = async (fantasyTeamId, week) => {
   }
 }
 
-exports.updateStatsForGameFromNFL = async game => {
+updateStatsForGameFromNFL = async game => {
   const gameId = game.gameId
   const teamResponse = await axios.get(
     `http://www.nfl.com/liveupdate/game-center/${gameId}/${gameId}_gtd.json`
@@ -529,7 +571,7 @@ exports.updateStatsForGameFromNFL = async game => {
   game.save()
 }
 
-exports.statlinesFromGame = async game => {
+statlinesFromGame = async game => {
   const homeStatsNode = game.homeTeam
   const awayStatsNode = game.awayTeam
   const week = game.week

@@ -9,8 +9,7 @@ const convertToJSON = require('xml-js')
 const {
   getCurrentGameData,
   updateFantasyPointsForMatchups,
-  updateStatsForGameFromNFL,
-  statlinesFromGame
+  parseGames
 } = require('../utility/dataManager')
 
 const Team = mongoose.model('Team')
@@ -243,48 +242,6 @@ exports.parseCurrentGames = async (req, res) => {
 exports.onlyUpdateMatchups = async (req, res) => {
   await updateFantasyPointsForMatchups(1, 16)
   res.send('Done updating matchups')
-}
-
-parseGames = async (games, startWeek, endWeek) => {
-  const gamesCount = games.length
-
-  // parse them all
-  let statlinesCount = 0
-  for (let i = 0; i < games.length; i++) {
-    const beforeQuery1 = moment()
-    await updateStatsForGameFromNFL(games[i])
-    // console.log(
-    //   `done: updateStatesForGameFromNFL ${games[i].awayTeam.teamAbbr} @ ${games[i].homeTeam.teamAbbr}`
-    // )
-    console.log(
-      'updating games with json results took ' +
-        moment().diff(beforeQuery1) +
-        'ms'
-    ) /// 6431 original result
-
-    const beforeQuery2 = moment()
-    const statlinesParsed = await statlinesFromGame(games[i])
-    statlinesCount += statlinesParsed
-    console.log(
-      statlinesParsed +
-        ' statlines by statlinesFromGame took ' +
-        moment().diff(beforeQuery2) +
-        'ms'
-    ) /// 6431 original result
-    // console.log(`${statlinesParsed} statlines for ${games[i].awayTeam.teamAbbr} @ ${games[i].homeTeam.teamAbbr} parsed`)
-  }
-
-  // update fantasy point totals in matchup collection
-  const beforeQuery3 = moment()
-  await updateFantasyPointsForMatchups(startWeek, endWeek)
-  console.log(
-    'updateFantasyPointsForMatchups took ' + moment().diff(beforeQuery3) + 'ms'
-  ) /// 6431 original result
-
-  return {
-    statlinesCount,
-    gamesCount
-  }
 }
 
 // store all teams in db
