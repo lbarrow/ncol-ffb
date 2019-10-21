@@ -657,6 +657,7 @@ setupTeamDefense = (gameStatsData, thisSideString) => {
         if (
           scoreSummary.desc.includes('blocked') ||
           scoreSummary.desc.includes('interception return') ||
+          scoreSummary.desc.includes('fumble recovery') ||
           scoreSummary.desc.includes('fumble return')
         ) {
           TDs += 1
