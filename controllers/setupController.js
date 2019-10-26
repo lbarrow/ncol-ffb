@@ -5,7 +5,7 @@ const moment = require('moment')
 const getCurrentWeek = require('../utility/getCurrentWeek')
 const convertToJSON = require('xml-js')
 
-const API_URL = 'http://localhost:4445/'
+const API_URL = process.env.API_URL
 
 const { getCurrentGameData, parseGames } = require('../utility/dataManager')
 const db = require('../db')
