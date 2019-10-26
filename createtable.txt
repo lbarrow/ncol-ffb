@@ -95,7 +95,7 @@ CREATE TABLE game(
     home_totalFirstDowns INT,
     home_totalYards INT,
     home_passingYards INT,
-    home_receivingYards INT,
+    home_rushingYards INT,
     home_penalties INT,
     home_penaltyYards INT,
     home_turnovers INT,
@@ -117,7 +117,7 @@ CREATE TABLE game(
     away_totalFirstDowns INT,
     away_totalYards INT,
     away_passingYards INT,
-    away_receivingYards INT,
+    away_rushingYards INT,
     away_penalties INT,
     away_penaltyYards INT,
     away_turnovers INT,
@@ -161,6 +161,6 @@ CREATE TABLE statline(
     dst_fumbles INT,
     dst_tds INT,
     dst_pointsAllowed INT,
-    fantasyPoints INT
+    fantasyPoints REAL
 );
 

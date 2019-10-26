@@ -312,7 +312,7 @@ exports.parseSpecificWeek = async (req, res) => {
   const week = parseInt(req.params.week)
   const { rows: games } = await db.query(
     `SELECT * FROM game WHERE week = $1 AND isoTime < $2`,
-    [week]
+    [week, moment().format('YYYY-MM-DD HH:MM')]
   )
 
   const parsingResult = await parseGames(games, week, week)
