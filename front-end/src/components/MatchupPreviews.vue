@@ -29,7 +29,11 @@ export default {
     }
   },
   methods: {
-    teamFantasyPoints(points) {
+    teamFantasyPoints(teamPoints) {
+      let points = 0.0
+      if (teamPoints != null) {
+        points = teamPoints
+      }
       return scoreFormatter(points)
     }
   }

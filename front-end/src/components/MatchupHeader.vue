@@ -20,7 +20,11 @@ export default {
   },
   computed: {
     teamFantasyPoints() {
-      return scoreFormatter(this.owner.total)
+      let points = 0.0
+      if (this.owner.total != null) {
+        points = this.owner.total
+      }
+      return scoreFormatter(points)
     }
   }
 }
