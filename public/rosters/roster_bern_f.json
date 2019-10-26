@@ -1,6 +1,6 @@
 [
   { "name": "Tom Brady", "team": "NE", "position": "QB" },
-  { "name": "Jared Goff", "team": "LAR", "position": "QB" },
+  { "name": "Jared Goff", "team": "LA", "position": "QB" },
   { "name": "Kyler Murray", "team": "ARI", "position": "QB" },
   { "name": "Aaron Rodgers", "team": "GB", "position": "QB" },
   { "name": "Deshaun Watson", "team": "HOU", "position": "QB" },

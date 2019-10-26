@@ -1,38 +1,24 @@
 const axios = require('axios')
-const mongoose = require('mongoose')
 const getCurrentWeek = require('../utility/getCurrentWeek')
 const moment = require('moment')
-
-const Game = mongoose.model('Game')
-const Player = mongoose.model('Player')
-const Statline = mongoose.model('Statline')
-const Matchup = mongoose.model('Matchup')
+const db = require('../db')
 
 exports.getCurrentGameData = async () => {
   console.log('getCurrentGameData called')
   const week = getCurrentWeek.getCurrentWeek()
-  const games = await Game.find({
-    isoTime: {
-      $lt: moment()
+  const { rows: games } = await db.query(
+    `SELECT *
+     FROM game
+     WHERE isotime < $1 AND isotime > $2 AND (quarter != 'Final' OR quarter != 'final overtime')`,
+    [
+      moment()
         .add(15, 'minutes')
-        .toDate(),
-      $gt: moment()
-        .subtract(6, 'hours')
-        .toDate()
-    },
-    $or: [
-      {
-        quarter: {
-          $ne: 'Final'
-        }
-      },
-      {
-        quarter: {
-          $ne: 'final overtime'
-        }
-      }
+        .format('YYYY-MM-DD HH:MM'),
+      moment()
+        .subtract(4, 'hours')
+        .format('YYYY-MM-DD HH:MM')
     ]
-  })
+  )
 
   const parsingResult = await exports.parseGames(games, week, week)
   return parsingResult
@@ -44,35 +30,11 @@ exports.parseGames = async (games, startWeek, endWeek) => {
   // parse them all
   let statlinesCount = 0
   for (let i = 0; i < games.length; i++) {
-    const beforeQuery1 = moment()
-    await updateStatsForGameFromNFL(games[i])
-    // console.log(
-    //   `done: updateStatesForGameFromNFL ${games[i].awayTeam.teamAbbr} @ ${games[i].homeTeam.teamAbbr}`
-    // )
-    console.log(
-      'updating games with json results took ' +
-        moment().diff(beforeQuery1) +
-        'ms'
-    ) /// 6431 original result
-
-    const beforeQuery2 = moment()
-    const statlinesParsed = await statlinesFromGame(games[i])
-    statlinesCount += statlinesParsed
-    console.log(
-      statlinesParsed +
-        ' statlines by statlinesFromGame took ' +
-        moment().diff(beforeQuery2) +
-        'ms'
-    ) /// 6431 original result
-    // console.log(`${statlinesParsed} statlines for ${games[i].awayTeam.teamAbbr} @ ${games[i].homeTeam.teamAbbr} parsed`)
+    statlinesCount += await updateStatsForGameFromNFL(games[i])
   }
 
   // update fantasy point totals in matchup collection
-  const beforeQuery3 = moment()
-  await exports.updateFantasyPointsForMatchups(startWeek, endWeek)
-  console.log(
-    'updateFantasyPointsForMatchups took ' + moment().diff(beforeQuery3) + 'ms'
-  ) /// 6431 original result
+  await updateFantasyPointsForMatchups(startWeek, endWeek)
 
   return {
     statlinesCount,
@@ -80,142 +42,148 @@ exports.parseGames = async (games, startWeek, endWeek) => {
   }
 }
 
-exports.updateFantasyPointsForMatchups = async (startWeek, endWeek) => {
+updateFantasyPointsForMatchups = async (startWeek, endWeek) => {
   for (let week = startWeek; week <= endWeek; week++) {
-    const matchups = await Matchup.find({ week })
+    const { rows: matchups } = await db.query(
+      `SELECT * FROM matchup WHERE week = $1`,
+      [week]
+    )
     for (let i = 0; i < matchups.length; i++) {
-      const homeResults = await totalPointsForTeamWeek(matchups[i].home, week)
-      matchups[i].homeScore = homeResults.score
-      matchups[i].homePlayersLeft = homeResults.playersLeft
-      matchups[i].homePlayersPlaying = homeResults.playersPlaying
-      matchups[i].homePlayersDone = homeResults.playersDone
-      const awayResults = await totalPointsForTeamWeek(matchups[i].away, week)
-      matchups[i].awayScore = awayResults.score
-      matchups[i].awayPlayersLeft = awayResults.playersLeft
-      matchups[i].awayPlayersPlaying = awayResults.playersPlaying
-      matchups[i].awayPlayersDone = awayResults.playersDone
-      await matchups[i].save()
+      const homeResults = await exports.totalPointsForTeamWeek(
+        matchups[i].home,
+        week
+      )
+      const awayResults = await exports.totalPointsForTeamWeek(
+        matchups[i].away,
+        week
+      )
+      await db.query(
+        ` UPDATE matchup
+          SET
+            homescore = $1,
+            homeplayersleft = $2,
+            homeplayersplaying = $3,
+            homeplayersdone = $4,
+            awayscore = $5,
+            awayplayersleft = $6,
+            awayplayersplaying = $7,
+            awayplayersdone = $8
+          WHERE id = $9`,
+        [
+          homeResults.score,
+          homeResults.playersLeft,
+          homeResults.playersPlaying,
+          homeResults.playersDone,
+          awayResults.score,
+          awayResults.playersLeft,
+          awayResults.playersPlaying,
+          awayResults.playersDone,
+          matchups[i].id
+        ]
+      )
     }
     console.log('completed updating matchups for week ' + week)
   }
 }
 
-markBestPlayers = (bestSpots, players) => {
-  for (let i = 0; i < players.length; i++) {
-    if (i < bestSpots) {
-      players[i].best = true
-    }
-  }
-}
-
-totalPointsForTeamWeek = async (fantasyTeamId, week) => {
+exports.totalPointsForTeamWeek = async (fantasyTeamId, week) => {
   let playersLeft = 0
   let playersPlaying = 0
   let playersDone = 0
-  const beforeQuery4 = moment()
-  let positions = await Player.aggregate([
-    {
-      $match: {
-        position: { $in: ['QB', 'RB', 'TE', 'WR', 'DST'] },
-        fantasyOwner: fantasyTeamId
-      }
-    },
-    {
-      $lookup: {
-        from: 'statlines',
-        let: { id: '$_id' },
-        pipeline: [
-          {
-            $match: {
-              $expr: { $eq: ['$player', '$$id'] },
-              week: week
-            }
-          }
-        ],
-        as: 'statline'
-      }
-    },
-    { $unwind: { path: '$statline', preserveNullAndEmptyArrays: true } },
-    {
-      $lookup: {
-        from: 'games',
-        let: { teamId: '$teamId' },
-        pipeline: [
-          {
-            $match: {
-              $expr: {
-                $or: [
-                  { $eq: ['$homeTeam.teamId', '$$teamId'] },
-                  { $eq: ['$awayTeam.teamId', '$$teamId'] }
-                ]
-              },
-              week: week
-            }
-          }
-        ],
-        as: 'game'
-      }
-    },
-    { $unwind: { path: '$game', preserveNullAndEmptyArrays: true } },
-    {
-      $group: {
-        _id: '$position',
-        players: {
-          $push: {
-            name: '$name',
-            statline: '$statline',
-            game: '$game',
-            displayName: '$displayName',
-            firstName: '$firstName',
-            lastName: '$lastName',
-            esbId: '$esbId',
-            gsisId: '$gsisId',
-            positionGroup: '$positionGroup',
-            position: '$position',
-            teamAbbr: '$teamAbbr',
-            teamId: '$teamId',
-            teamFullName: '$teamFullName',
-            fantasyOwner: '$fantasyOwner'
-          }
-        }
-      }
-    },
-    { $sort: { _id: 1 } }
-  ])
-  console.log(
-    'grabbing players for team took ' + moment().diff(beforeQuery4) + 'ms'
-  ) /// 6431 original result
+  let { rows: players } = await db.query(
+    `
+      SELECT
+        player.displayname,
+        player.teamfullname,
+        player.teamabbr,
+        player.firstname,
+        player.lastname,
+        player.esbid,
+        player.position,
+        game.isotime,
+        game.quarter,
+        game.home_teamabbr,
+        game.home_scorecurrent,
+        game.away_teamabbr,
+        game.away_scorecurrent,
+        game.clock,
+        statline.id AS statline_id,
+        statline.passingattempts AS statline_passingattempts,
+        statline.passingcompletions AS statline_passingcompletions,
+        statline.passingyards AS statline_passingyards,
+        statline.passingtds AS statline_passingtds,
+        statline.passingints AS statline_passingints,
+        statline.passingtwopts AS statline_passingtwopts,
+        statline.rushingattempts AS statline_rushingattempts,
+        statline.rushingyards AS statline_rushingyards,
+        statline.rushingtds AS statline_rushingtds,
+        statline.rushingtwopts AS statline_rushingtwopts,
+        statline.receivingreceptions AS statline_receivingreceptions,
+        statline.receivingyards AS statline_receivingyards,
+        statline.receivingtds AS statline_receivingtds,
+        statline.receivingtwopts AS statline_receivingtwopts,
+        statline.fumbleslost AS statline_fumbleslost,
+        statline.dst_sacks AS statline_dst_sacks,
+        statline.dst_ints AS statline_dst_ints,
+        statline.dst_safeties AS statline_dst_safeties,
+        statline.dst_fumbles AS statline_dst_fumbles,
+        statline.dst_tds AS statline_dst_tds,
+        statline.dst_pointsallowed AS dst_pointsallowed,
+        statline.fantasypoints
+      FROM player
+      LEFT OUTER JOIN game ON game.week = $1 AND (player.teamid = game.home_teamid OR player.teamid = game.away_teamid)
+      LEFT OUTER JOIN statline ON statline.playerid = player.id AND statline.week = $2
+      WHERE fantasyowner = $3
+      ORDER BY CASE player.position
+        WHEN 'QB' THEN 1
+        WHEN 'RB' THEN 2
+        WHEN 'WR' THEN 3
+        WHEN 'TE' THEN 4
+        WHEN 'DST' THEN 5
+      END, game.isoTime ASC
+  `,
+    [week, week, fantasyTeamId]
+  )
 
-  // sort the positions in specific order
-  const sortOrder = ['QB', 'RB', 'WR', 'TE', 'DST']
-  positions = positions.sort(function(a, b) {
-    return sortOrder.indexOf(a._id) > sortOrder.indexOf(b._id)
-  })
+  // create array of positions with players slotted into appropriate position subarray
+  const positionTypes = ['QB', 'RB', 'WR', 'TE', 'DST']
+  let positions = []
+  for (let i = 0; i < positionTypes.length; i++) {
+    let position = {
+      _id: positionTypes[i],
+      players: []
+    }
+    for (let j = 0; j < players.length; j++) {
+      const player = players[j]
+      if (player.position === position._id) {
+        position.players.push(players[j])
+      }
+    }
+    positions.push(position)
+  }
 
   // move fantasy points to player level
   positions = positions.map(position => {
     position.players.map(player => {
       // setup players fantasy points
-      let fantasyPoints = 0.0
-      if (player.statline) {
-        fantasyPoints = player.statline.fantasyPoints
+      if (player.fantasypoints == null) {
+        player.fantasypoints = 0.0
+      } else {
+        player.fantasypoints = Math.round(player.fantasypoints * 100) / 100
       }
-      player.fantasyPoints = Math.round(fantasyPoints * 100) / 100
 
       // determine if player yet to play, played or playing now
-      // if no game, player on bye
-      if (player.game) {
-        if (!player.game.quarter) {
+      // if no gametime, player on bye
+      if (player.isotime != null) {
+        if (player.quarter === null) {
           ++playersLeft // if no quarter, game hasn't started
+        } else if (
+          player.quarter === 'Final' ||
+          player.quarter === 'final overtime'
+        ) {
+          ++playersDone
         } else {
-          if (
-            player.game.quarter === 'Final' ||
-            player.game.quarter === 'final overtime'
-          ) {
-            ++playersDone
-          } else {
-            ++playersPlaying
-          }
+          ++playersPlaying
         }
       }
       return player
@@ -227,7 +195,7 @@ totalPointsForTeamWeek = async (fantasyTeamId, week) => {
   // mark best x positions
   positions = positions.map(position => {
     position.players.sort(function(a, b) {
-      return b.fantasyPoints - a.fantasyPoints
+      return b.fantasypoints - a.fantasypoints
     })
 
     let bestSpots
@@ -256,11 +224,13 @@ totalPointsForTeamWeek = async (fantasyTeamId, week) => {
   for (let i = 0; i < positions.length; i++) {
     for (let j = 0; j < positions[i].players.length; j++) {
       if (positions[i].players[j].best) {
-        teamTotal += positions[i].players[j].fantasyPoints
+        teamTotal += positions[i].players[j].fantasypoints
       }
     }
   }
+
   return {
+    positions,
     score: Math.round(teamTotal * 100) / 100,
     playersLeft,
     playersPlaying,
@@ -268,309 +238,132 @@ totalPointsForTeamWeek = async (fantasyTeamId, week) => {
   }
 }
 
+markBestPlayers = (bestSpots, players) => {
+  for (let i = 0; i < players.length; i++) {
+    if (i < bestSpots) {
+      players[i].best = true
+    }
+  }
+}
+
 updateStatsForGameFromNFL = async game => {
-  const gameId = game.gameId
+  // const gameId = '2019090811'
+  // const teamResponse = await axios.get('http://localhost:4445/game.json')
+  const gameId = game.gameid
+  console.log(
+    'gameId',
+    gameId,
+    `http://www.nfl.com/liveupdate/game-center/${gameId}/${gameId}_gtd.json`
+  )
   const teamResponse = await axios.get(
     `http://www.nfl.com/liveupdate/game-center/${gameId}/${gameId}_gtd.json`
   )
-  // const gameId = '2019090801'
-  // const teamResponse = await axios.get('http://localhost:4444/game2.json')
+  const week = game.week
   const gameStatsData = teamResponse.data[gameId]
+  gameStatsData.gameId = gameId
+  gameStatsData.week = week
 
   // update game first
-  game.yardline = gameStatsData.yl
-  game.quarter = gameStatsData.qtr
-  game.down = gameStatsData.down
-  game.yardsToGo = gameStatsData.togo
-  game.clock = gameStatsData.clock
-  game.possessingTeamAbbr = gameStatsData.posteam
-  game.redzone = gameStatsData.redzone
-  game.homeTeam.timeouts = gameStatsData.home.to
-  game.homeTeam.score.quarter1 = gameStatsData.home.score['1']
-  game.homeTeam.score.quarter2 = gameStatsData.home.score['2']
-  game.homeTeam.score.quarter3 = gameStatsData.home.score['3']
-  game.homeTeam.score.quarter4 = gameStatsData.home.score['4']
-  game.homeTeam.score.overtime = gameStatsData.home.score['5']
-  game.homeTeam.score.current = gameStatsData.home.score['T']
-  game.homeTeam.totalFirstDowns = gameStatsData.home.stats.team.totfd
-  game.homeTeam.totalYards = gameStatsData.home.stats.team.totyds
-  game.homeTeam.passingYards = gameStatsData.home.stats.team.pyrds
-  game.homeTeam.receivingYards = gameStatsData.home.stats.team.ryrds
-  game.homeTeam.penalties = gameStatsData.home.stats.team.pen
-  game.homeTeam.penaltyYards = gameStatsData.home.stats.team.penyds
-  game.homeTeam.turnovers = gameStatsData.home.stats.team.trnovr
-  game.homeTeam.punt = gameStatsData.home.stats.team.pt
-  game.homeTeam.puntyds = gameStatsData.home.stats.team.ptyds
-  game.homeTeam.puntavg = gameStatsData.home.stats.team.ptavg
-  game.homeTeam.timeOfPossession = gameStatsData.home.stats.team.top
-  game.awayTeam.timeouts = gameStatsData.away.to
-  game.awayTeam.score.quarter1 = gameStatsData.away.score['1']
-  game.awayTeam.score.quarter2 = gameStatsData.away.score['2']
-  game.awayTeam.score.quarter3 = gameStatsData.away.score['3']
-  game.awayTeam.score.quarter4 = gameStatsData.away.score['4']
-  game.awayTeam.score.overtime = gameStatsData.away.score['5']
-  game.awayTeam.score.current = gameStatsData.away.score['T']
-  game.awayTeam.totalFirstDowns = gameStatsData.away.stats.team.totfd
-  game.awayTeam.totalYards = gameStatsData.away.stats.team.totyds
-  game.awayTeam.passingYards = gameStatsData.away.stats.team.pyrds
-  game.awayTeam.receivingYards = gameStatsData.away.stats.team.ryrds
-  game.awayTeam.penalties = gameStatsData.away.stats.team.pen
-  game.awayTeam.penaltyYards = gameStatsData.away.stats.team.penyds
-  game.awayTeam.turnovers = gameStatsData.away.stats.team.trnovr
-  game.awayTeam.punt = gameStatsData.away.stats.team.pt
-  game.awayTeam.puntyds = gameStatsData.away.stats.team.ptyds
-  game.awayTeam.puntavg = gameStatsData.away.stats.team.ptavg
-  game.awayTeam.timeOfPossession = gameStatsData.away.stats.team.top
+  await db.query(
+    `UPDATE game
+    SET
+      yardline = $1,
+      quarter = $2,
+      down = $3,
+      yardstogo = $4,
+      clock = $5,
+      possessingteamabbr = $6,
+      redzone = $7,
+      home_timeouts = $8,
+      home_totalfirstdowns = $9,
+      home_totalyards = $10,
+      home_passingyards = $11,
+      home_rushingyards = $12,
+      home_penalties = $13,
+      home_penaltyyards = $14,
+      home_turnovers = $15,
+      home_punt = $16,
+      home_puntyds = $17,
+      home_puntavg = $18,
+      home_timeofpossession = $19,
+      home_scorequarter1 = $20,
+      home_scorequarter2 = $21,
+      home_scorequarter3 = $22,
+      home_scorequarter4 = $23,
+      home_scoreovertime = $24,
+      home_scorecurrent = $25,
+      away_timeouts = $26,
+      away_totalfirstdowns = $27,
+      away_totalyards = $28,
+      away_passingyards = $29,
+      away_rushingyards = $30,
+      away_penalties = $31,
+      away_penaltyyards = $32,
+      away_turnovers = $33,
+      away_punt = $34,
+      away_puntyds = $35,
+      away_puntavg = $36,
+      away_timeofpossession = $37,
+      away_scorequarter1 = $38,
+      away_scorequarter2 = $39,
+      away_scorequarter3 = $40,
+      away_scorequarter4 = $41,
+      away_scoreovertime = $42,
+      away_scorecurrent = $43
+    WHERE gameid = $44`,
+    [
+      gameStatsData.yl,
+      gameStatsData.qtr,
+      gameStatsData.down,
+      gameStatsData.togo,
+      gameStatsData.clock,
+      gameStatsData.posteam,
+      gameStatsData.redzone,
+      gameStatsData.home.to,
+      gameStatsData.home.stats.team.totfd,
+      gameStatsData.home.stats.team.totyds,
+      gameStatsData.home.stats.team.pyrds,
+      gameStatsData.home.stats.team.ryrds,
+      gameStatsData.home.stats.team.pen,
+      gameStatsData.home.stats.team.penyds,
+      gameStatsData.home.stats.team.trnovr,
+      gameStatsData.home.stats.team.pt,
+      gameStatsData.home.stats.team.ptyds,
+      gameStatsData.home.stats.team.ptavg,
+      gameStatsData.home.stats.team.top,
+      gameStatsData.home.score['1'],
+      gameStatsData.home.score['2'],
+      gameStatsData.home.score['3'],
+      gameStatsData.home.score['4'],
+      gameStatsData.home.score['5'],
+      gameStatsData.home.score['T'],
+      gameStatsData.away.to,
+      gameStatsData.away.stats.team.totfd,
+      gameStatsData.away.stats.team.totyds,
+      gameStatsData.away.stats.team.pyrds,
+      gameStatsData.away.stats.team.ryrds,
+      gameStatsData.away.stats.team.pen,
+      gameStatsData.away.stats.team.penyds,
+      gameStatsData.away.stats.team.trnovr,
+      gameStatsData.away.stats.team.pt,
+      gameStatsData.away.stats.team.ptyds,
+      gameStatsData.away.stats.team.ptavg,
+      gameStatsData.away.stats.team.top,
+      gameStatsData.away.score['1'],
+      gameStatsData.away.score['2'],
+      gameStatsData.away.score['3'],
+      gameStatsData.away.score['4'],
+      gameStatsData.away.score['5'],
+      gameStatsData.away.score['T'],
+      gameId
+    ]
+  )
 
-  const teamTypes = ['home', 'away']
-  for (let i = 0; i < teamTypes.length; i++) {
-    const passingPlayers = gameStatsData[teamTypes[i]].stats.passing
-    if (passingPlayers) {
-      game[teamTypes[i] + 'Team'].passing = []
-      for (const gsisId in passingPlayers) {
-        if (passingPlayers.hasOwnProperty(gsisId)) {
-          let player = passingPlayers[gsisId]
-          game[teamTypes[i] + 'Team'].passing.push({
-            gsisId,
-            nameAbbr: player.name,
-            attempts: player.att,
-            completions: player.cmp,
-            yards: player.yds,
-            touchdowns: player.tds,
-            interceptions: player.ints,
-            twoPointsAttempted: player.twopta,
-            twoPointsMade: player.twoptm
-          })
-        }
-      }
-    }
-    const rushingPlayers = gameStatsData[teamTypes[i]].stats.rushing
-    if (rushingPlayers) {
-      game[teamTypes[i] + 'Team'].rushing = []
-      for (const gsisId in rushingPlayers) {
-        if (rushingPlayers.hasOwnProperty(gsisId)) {
-          let player = rushingPlayers[gsisId]
-          game[teamTypes[i] + 'Team'].rushing.push({
-            gsisId,
-            nameAbbr: player.name,
-            attempts: player.att,
-            yards: player.yds,
-            touchdowns: player.tds,
-            long: player.lng,
-            longTouchdown: player.lngtd,
-            twoPointsAttempted: player.twopta,
-            twoPointsMade: player.twoptm
-          })
-        }
-      }
-    }
-    const receivingPlayers = gameStatsData[teamTypes[i]].stats.receiving
-    if (receivingPlayers) {
-      game[teamTypes[i] + 'Team'].receiving = []
-      for (const gsisId in receivingPlayers) {
-        if (receivingPlayers.hasOwnProperty(gsisId)) {
-          let player = receivingPlayers[gsisId]
-          game[teamTypes[i] + 'Team'].receiving.push({
-            gsisId,
-            nameAbbr: player.name,
-            receptions: player.rec,
-            yards: player.yds,
-            touchdowns: player.tds,
-            long: player.lng,
-            longTouchdown: player.lngtd,
-            twoPointsAttempted: player.twopta,
-            twoPointsMade: player.twoptm
-          })
-        }
-      }
-    }
-    const fumblesPlayers = gameStatsData[teamTypes[i]].stats.fumbles
-    if (fumblesPlayers) {
-      game[teamTypes[i] + 'Team'].fumbles = []
-      for (const gsisId in fumblesPlayers) {
-        if (fumblesPlayers.hasOwnProperty(gsisId)) {
-          let player = fumblesPlayers[gsisId]
-          game[teamTypes[i] + 'Team'].fumbles.push({
-            gsisId,
-            nameAbbr: player.name,
-            total: player.tot,
-            recovered: player.rcv,
-            teamRecovered: player.trcv,
-            yards: player.yds,
-            lost: player.lost
-          })
-        }
-      }
-    }
-    const kickingPlayers = gameStatsData[teamTypes[i]].stats.kicking
-    if (kickingPlayers) {
-      game[teamTypes[i] + 'Team'].kicking = []
-      for (const gsisId in kickingPlayers) {
-        if (kickingPlayers.hasOwnProperty(gsisId)) {
-          let player = kickingPlayers[gsisId]
-          game[teamTypes[i] + 'Team'].kicking.push({
-            gsisId,
-            nameAbbr: player.name,
-            fieldGoalsAttempted: player.fgm,
-            fieldGoalsMade: player.fga,
-            fieldGoalYards: player.fgyds,
-            totalPointsFromFieldGoals: player.totpfg,
-            extraPointsAttempted: player.xpmade,
-            extraPointsMade: player.xpmissed,
-            extraPointsMissed: player.xpa,
-            extraPointsBlocked: player.xpb,
-            extraPointsTotal: player.xptot
-          })
-        }
-      }
-    }
-    const puntingPlayers = gameStatsData[teamTypes[i]].stats.punting
-    if (puntingPlayers) {
-      game[teamTypes[i] + 'Team'].punting = []
-      for (const gsisId in puntingPlayers) {
-        if (puntingPlayers.hasOwnProperty(gsisId)) {
-          let player = puntingPlayers[gsisId]
-          game[teamTypes[i] + 'Team'].punting.push({
-            gsisId,
-            nameAbbr: player.name,
-            punts: player.pts,
-            yards: player.yds,
-            average: player.avg,
-            recoveredWithinThe20: player.i20,
-            long: player.lng
-          })
-        }
-      }
-    }
-    const kickReturningPlayers = gameStatsData[teamTypes[i]].stats.kickret
-    if (kickReturningPlayers) {
-      game[teamTypes[i] + 'Team'].kickReturning = []
-      for (const gsisId in kickReturningPlayers) {
-        if (kickReturningPlayers.hasOwnProperty(gsisId)) {
-          let player = kickReturningPlayers[gsisId]
-          game[teamTypes[i] + 'Team'].kickReturning.push({
-            gsisId,
-            nameAbbr: player.name,
-            returns: player.ret,
-            average: player.avg,
-            touchdowns: player.tds,
-            long: player.lng,
-            longTouchdown: player.lngtd
-          })
-        }
-      }
-    }
-    const puntReturningPlayers = gameStatsData[teamTypes[i]].stats.puntret
-    if (puntReturningPlayers) {
-      game[teamTypes[i] + 'Team'].puntReturning = []
-      for (const gsisId in puntReturningPlayers) {
-        if (puntReturningPlayers.hasOwnProperty(gsisId)) {
-          let player = puntReturningPlayers[gsisId]
-          game[teamTypes[i] + 'Team'].puntReturning.push({
-            gsisId,
-            nameAbbr: player.name,
-            returns: player.ret,
-            average: player.avg,
-            touchdowns: player.tds,
-            long: player.lng,
-            longTouchdown: player.lngtd
-          })
-        }
-      }
-    }
-    const defensePlayers = gameStatsData[teamTypes[i]].stats.defense
-    if (defensePlayers) {
-      game[teamTypes[i] + 'Team'].defense = []
-      for (const gsisId in defensePlayers) {
-        if (defensePlayers.hasOwnProperty(gsisId)) {
-          let player = defensePlayers[gsisId]
-          game[teamTypes[i] + 'Team'].defense.push({
-            gsisId,
-            nameAbbr: player.name,
-            tackles: player.tkl,
-            assists: player.ast,
-            sacks: player.sk,
-            interceptions: player.int,
-            forcedFumbles: player.ffum
-          })
-        }
-      }
-    }
-  }
-
-  const scoringSummaries = gameStatsData.scrsummary
-  if (scoringSummaries) {
-    game.scoreSummaries = []
-    for (const scoringId in scoringSummaries) {
-      if (scoringSummaries.hasOwnProperty(scoringId)) {
-        let scoringSummary = scoringSummaries[scoringId]
-        game.scoreSummaries.push({
-          scoringType: scoringSummary.type,
-          description: scoringSummary.desc,
-          quarter: scoringSummary.qtr,
-          teamAbbr: scoringSummary.team
-        })
-      }
-    }
-  }
-
-  // const driveSummaries = gameStatsData.drives
-  // if (driveSummaries) {
-  //   game.drives = []
-  //   for (const driveId in driveSummaries) {
-  //     if (driveId !== 'crntdrv') {
-  //       if (driveSummaries.hasOwnProperty(driveId)) {
-  //         let driveSummary = driveSummaries[driveId]
-  //         let plays = []
-  //         const playList = driveSummary.plays
-  //         for (const playId in playList) {
-  //           if (playList.hasOwnProperty(playId)) {
-  //             let play = playList[playId]
-  //             plays.push({
-  //               quarter: play.qtr,
-  //               down: play.down,
-  //               time: play.time,
-  //               yardline: play.yrdln,
-  //               yardsToGo: play.ydstogo,
-  //               netYards: play.ydsnet,
-  //               possessingTeamAbbr: play.posteam,
-  //               description: play.desc,
-  //               note: play.note
-  //             })
-  //           }
-  //         }
-
-  //         game.drives.push({
-  //           possessingTeamAbbr: driveSummary.posteam,
-  //           quarter: driveSummary.qtr,
-  //           redzone: driveSummary.redzone,
-  //           firstDowns: driveSummary.fds,
-  //           result: driveSummary.result,
-  //           penaltyYards: driveSummary.penyds,
-  //           yardsGained: driveSummary.ydsgained,
-  //           numberOfPlays: driveSummary.numplays,
-  //           possessionTime: driveSummary.postime,
-  //           start: {
-  //             quarter: driveSummary.start.qtr,
-  //             time: driveSummary.start.time,
-  //             yardline: driveSummary.start.yrdln,
-  //             teamAbbr: driveSummary.start.team
-  //           },
-  //           end: {
-  //             quarter: driveSummary.end.qtr,
-  //             time: driveSummary.end.time,
-  //             yardline: driveSummary.end.yrdln,
-  //             teamAbbr: driveSummary.end.team
-  //           },
-  //           plays
-  //         })
-  //       }
-  //     }
-  //   }
-  // }
-  game.save()
+  const statlinesParsed = await statlinesFromGame(gameStatsData)
+  return statlinesParsed
 }
 
+<<<<<<< HEAD
 statlinesFromGame = async game => {
   const homeStatsNode = game.homeTeam
   const awayStatsNode = game.awayTeam
@@ -578,6 +371,17 @@ statlinesFromGame = async game => {
   const gameId = game.gameId
   let homeTeamDef = setupTeamDefense(game, 'home')
   let awayTeamDef = setupTeamDefense(game, 'away')
+=======
+// generate statlines from game.json
+statlinesFromGame = async gameStatsData => {
+  const gameId = gameStatsData.gameId
+  const week = gameStatsData.week
+  const homeStatsNode = gameStatsData.home.stats
+  const awayStatsNode = gameStatsData.away.stats
+
+  let homeTeamDef = setupTeamDefense(gameStatsData, 'home')
+  let awayTeamDef = setupTeamDefense(gameStatsData, 'away')
+>>>>>>> postgres
   const cleanedStats = [
     ...cleanupStatType(homeStatsNode.passing, 'passing', week, gameId),
     ...cleanupStatType(awayStatsNode.passing, 'passing', week, gameId),
@@ -593,7 +397,7 @@ statlinesFromGame = async game => {
   const playerStats = [
     ...cleanedStats
       .reduce(
-        (a, b) => a.set(b.gsisId, Object.assign(a.get(b.gsisId) || {}, b)),
+        (a, b) => a.set(b.gsisid, Object.assign(a.get(b.gsisid) || {}, b)),
         new Map()
       )
       .values(),
@@ -602,94 +406,197 @@ statlinesFromGame = async game => {
   ]
 
   // insert or update stats
-  var statlinesUpserted = 0
-  for (let index = 0; index < playerStats.length; index++) {
-    const player = await Player.findOne({ gsisId: playerStats[index].gsisId })
-    if (player != undefined) {
+  let statlinesUpserted = 0
+  for (let i = 0; i < playerStats.length; i++) {
+    let { rows: playerResult } = await db.query(
+      'SELECT id, displayname, position FROM player WHERE gsisid = $1',
+      [playerStats[i].gsisid]
+    )
+    if (playerResult.length) {
+      const player = playerResult.pop()
+      let stats = playerStats[i]
       let fantasyPoints = 0.0
-      let stats = playerStats[index]
-      if (stats.hasOwnProperty('pointsAllowed')) {
-        fantasyPoints += stats.sacks
-        fantasyPoints += stats.fumbles * 2
-        fantasyPoints += stats.ints * 2
-        fantasyPoints += stats.safeties * 2
-        fantasyPoints += stats.TDs * 6
-        if (stats.pointsAllowed == 0) {
+      if (player.position === 'DST') {
+        fantasyPoints += stats.dst_sacks
+        fantasyPoints += stats.dst_fumbles * 2
+        fantasyPoints += stats.dst_ints * 2
+        fantasyPoints += stats.dst_safeties * 2
+        fantasyPoints += stats.dst_tds * 6
+        if (stats.dst_pointsallowed == 0) {
           fantasyPoints += 10
         }
-        if (stats.pointsAllowed > 0 && stats.pointsAllowed <= 6) {
+        if (stats.dst_pointsallowed > 0 && stats.dst_pointsallowed <= 6) {
           fantasyPoints += 7
         }
-        if (stats.pointsAllowed > 6 && stats.pointsAllowed <= 20) {
+        if (stats.dst_pointsallowed > 6 && stats.dst_pointsallowed <= 20) {
           fantasyPoints += 4
         }
-        if (stats.pointsAllowed > 20 && stats.pointsAllowed <= 29) {
+        if (stats.dst_pointsallowed > 20 && stats.dst_pointsallowed <= 29) {
           fantasyPoints += 1
         }
-        if (stats.pointsAllowed > 29) {
+        if (stats.dst_pointsallowed > 29) {
           fantasyPoints -= 3
         }
       } else {
-        if (stats.passingAttempts) {
-          fantasyPoints += stats.passingYards / 25
-          fantasyPoints += stats.passingInts * -2
-          fantasyPoints += stats.passingTDs * 6
-          fantasyPoints += stats.passingTwoPts * 2
-          if (stats.passingYards >= 300) {
+        if (stats.passingattempts) {
+          fantasyPoints += stats.passingyards / 25
+          fantasyPoints += stats.passingints * -2
+          fantasyPoints += stats.passingtds * 6
+          fantasyPoints += stats.passingtwopts * 2
+          if (stats.passingyards >= 300) {
             fantasyPoints += 1
           }
-          if (stats.passingYards >= 400) {
+          if (stats.passingyards >= 400) {
             fantasyPoints += 2
           }
-          if (stats.passingYards >= 500) {
+          if (stats.passingyards >= 500) {
             fantasyPoints += 3
           }
         }
-        if (stats.rushingAttempts) {
-          fantasyPoints += stats.rushingYards / 10
-          fantasyPoints += stats.rushingTDs * 6
-          fantasyPoints += stats.rushingTwoPts * 2
-          if (stats.rushingYards >= 100) {
+        if (stats.rushingattempts) {
+          fantasyPoints += stats.rushingyards / 10
+          fantasyPoints += stats.rushingtds * 6
+          fantasyPoints += stats.rushingtwopts * 2
+          if (stats.rushingyards >= 100) {
             fantasyPoints += 2
           }
-          if (stats.rushingYards >= 150) {
+          if (stats.rushingyards >= 150) {
             fantasyPoints += 3
           }
-          if (stats.rushingYards >= 200) {
+          if (stats.rushingyards >= 200) {
             fantasyPoints += 4
           }
         }
-        if (stats.receivingReceptions) {
-          fantasyPoints += stats.receivingReceptions
-          fantasyPoints += stats.receivingYards / 10
-          fantasyPoints += stats.receivingTDs * 6
-          fantasyPoints += stats.receivingTwoPts * 2
-          if (stats.receivingYards >= 100) {
+        if (stats.receivingreceptions) {
+          fantasyPoints += stats.receivingreceptions
+          fantasyPoints += stats.receivingyards / 10
+          fantasyPoints += stats.receivingtds * 6
+          fantasyPoints += stats.receivingtwopts * 2
+          if (stats.receivingyards >= 100) {
             fantasyPoints += 2
           }
-          if (stats.receivingYards >= 150) {
+          if (stats.receivingyards >= 150) {
             fantasyPoints += 3
           }
-          if (stats.receivingYards >= 200) {
+          if (stats.receivingyards >= 200) {
             fantasyPoints += 4
           }
         }
-        if (stats.fumbles) {
-          fantasyPoints += stats.fumbles * -2
+        if (stats.fumbleslost) {
+          fantasyPoints += stats.fumbleslost * -2
         }
       }
-      stats.player = player._id
-      stats.fantasyPoints = Math.round(fantasyPoints * 100) / 100
-      await Statline.findOneAndUpdate(
-        {
-          gsisId: playerStats[index].gsisId,
-          week: playerStats[index].week,
-          player: player._id,
-          position: player.position
-        },
-        stats,
-        { upsert: true, new: true, setDefaultsOnInsert: true }
+      stats.fantasypoints = Math.round(fantasyPoints * 100) / 100
+
+      let { rows: existingStatline } = await db.query(
+        `SELECT id FROM statline WHERE week = $1 AND playerid = $2`,
+        [week, player.id]
       )
+      if (existingStatline.length) {
+        // if statline exists, update it
+        console.log('update statline for: ' + player.displayname)
+        const statlineId = existingStatline[0].id
+        await db.query(
+          `UPDATE statline SET
+              playerid = $1,
+              name = $2,
+              gameid = $3,
+              week = $4,
+              position = $5,
+              passingattempts = $6,
+              passingcompletions = $7,
+              passingyards = $8,
+              passingtds = $9,
+              passingints = $10,
+              passingtwopts = $11,
+              rushingattempts = $12,
+              rushingyards = $13,
+              rushingtds = $14,
+              rushingtwopts = $15,
+              receivingreceptions = $16,
+              receivingyards = $17,
+              receivingtds = $18,
+              receivingtwopts = $19,
+              fumbleslost = $20,
+              dst_sacks = $21,
+              dst_ints = $22,
+              dst_safeties = $23,
+              dst_fumbles = $24,
+              dst_tds = $25,
+              dst_pointsallowed = $26,
+              fantasypoints = $27
+            WHERE id = $28`,
+          [
+            player.id,
+            player.displayname,
+            stats.gameid,
+            stats.week,
+            player.position,
+            stats.passingattempts,
+            stats.passingcompletions,
+            stats.passingyards,
+            stats.passingtds,
+            stats.passingints,
+            stats.passingtwopts,
+            stats.rushingattempts,
+            stats.rushingyards,
+            stats.rushingtds,
+            stats.rushingtwopts,
+            stats.receivingreceptions,
+            stats.receivingyards,
+            stats.receivingtds,
+            stats.receivingtwopts,
+            stats.fumbleslost,
+            stats.dst_sacks,
+            stats.dst_ints,
+            stats.dst_safeties,
+            stats.dst_fumbles,
+            stats.dst_tds,
+            stats.dst_pointsallowed,
+            stats.fantasypoints,
+            statlineId
+          ]
+        )
+      } else {
+        // insert it
+        console.log('insert statline for: ' + player.displayname)
+        await db.query(
+          `INSERT INTO statline
+            (playerid, name, gameid, week, position, passingattempts, passingcompletions, passingyards, passingtds, passingints,
+              passingtwopts, rushingattempts, rushingyards, rushingtds, rushingtwopts, receivingreceptions, receivingyards, receivingtds,
+              receivingtwopts, fumbleslost, dst_sacks, dst_ints, dst_safeties, dst_fumbles, dst_tds, dst_pointsallowed, fantasypoints)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)`,
+          [
+            player.id,
+            player.displayname,
+            stats.gameid,
+            stats.week,
+            player.position,
+            stats.passingattempts,
+            stats.passingcompletions,
+            stats.passingyards,
+            stats.passingtds,
+            stats.passingints,
+            stats.passingtwopts,
+            stats.rushingattempts,
+            stats.rushingyards,
+            stats.rushingtds,
+            stats.rushingtwopts,
+            stats.receivingreceptions,
+            stats.receivingyards,
+            stats.receivingtds,
+            stats.receivingtwopts,
+            stats.fumbleslost,
+            stats.dst_sacks,
+            stats.dst_ints,
+            stats.dst_safeties,
+            stats.dst_fumbles,
+            stats.dst_tds,
+            stats.dst_pointsallowed,
+            stats.fantasypoints
+          ]
+        )
+      }
       ++statlinesUpserted
     }
   }
@@ -697,121 +604,132 @@ statlinesFromGame = async game => {
   return statlinesUpserted
 }
 
-setupTeamDefense = (game, thisSideString) => {
+setupTeamDefense = (gameStatsData, thisSideString) => {
   const otherSideString = thisSideString === 'home' ? 'away' : 'home'
-  const scoreSummaries = game.scoreSummaries
-  const thisSideTeam = game[thisSideString + 'Team']
-  const otherSideTeam = game[otherSideString + 'Team']
+  const scoreSummaries = gameStatsData.scrsummary
+  const thisSideTeam = gameStatsData[thisSideString]
+  const otherSideTeam = gameStatsData[otherSideString]
 
   // look through defensive players to figure out total sacks and interceptions
   let sacksFloat = 0.0
   let ints = 0
-  for (let i = 0; i < thisSideTeam.defense.length; i++) {
-    const player = thisSideTeam.defense[i]
-    sacksFloat += player.sacks
-    ints += player.interceptions
+  if (thisSideTeam.stats.defense) {
+    for (const gsisId in thisSideTeam.stats.defense) {
+      const player = thisSideTeam.stats.defense[gsisId]
+      sacksFloat += player.sk
+      ints += player.int
+    }
   }
   const sacks = Math.round(sacksFloat) // sacks can be split between players
 
   // look through fumble node to figure out which ones were lost by the other team
   let fumbles = 0
-  if (otherSideTeam.fumbles) {
-    const fumbleList = otherSideTeam.fumbles
-    for (let i = 0; i < fumbleList.length; i++) {
-      const player = fumbleList[i]
+  if (otherSideTeam.stats.fumbles) {
+    for (const gsisId in otherSideTeam.stats.fumbles) {
+      const player = otherSideTeam.stats.fumbles[gsisId]
       fumbles += player.lost
     }
   }
 
   let safeties = 0
-  for (let i = 0; i < scoreSummaries.length; i++) {
-    const scoreSummary = scoreSummaries[i]
-    // make sure it's a TD and it's our team
-    if (
-      scoreSummary.scoringType === 'SAF' &&
-      scoreSummary.teamAbbr === thisSideTeam.teamAbbr
-    ) {
-      safeties += 1
+  if (scoreSummaries) {
+    for (const gsisId in scoreSummaries) {
+      const scoreSummary = scoreSummaries[gsisId]
+      if (
+        scoreSummary.type === 'SAF' &&
+        scoreSummary.team === thisSideTeam.abbr
+      ) {
+        safeties += 1
+      }
     }
   }
 
   // total up return and defensive TDs
   let TDs = 0
-  for (let i = 0; i < thisSideTeam.puntReturning.length; i++) {
-    TDs += thisSideTeam.puntReturning[i].touchdowns
+  if (thisSideTeam.stats.puntret) {
+    for (const gsisId in thisSideTeam.stats.puntret) {
+      TDs += thisSideTeam.stats.puntret[gsisId].tds
+    }
   }
-  for (let i = 0; i < thisSideTeam.kickReturning.length; i++) {
-    TDs += thisSideTeam.kickReturning[i].touchdowns
+  if (thisSideTeam.stats.kickret) {
+    for (const gsisId in thisSideTeam.stats.kickret) {
+      TDs += thisSideTeam.stats.kickret[gsisId].tds
+    }
   }
-  for (let i = 0; i < scoreSummaries.length; i++) {
-    const scoreSummary = scoreSummaries[i]
-    // make sure it's a TD and it's our team
-    if (
-      scoreSummary.scoringType === 'TD' &&
-      scoreSummary.teamAbbr === thisSideTeam.teamAbbr
-    ) {
-      // see if it was an interception or fumble return
+  if (scoreSummaries) {
+    for (const gsisId in scoreSummaries) {
+      const scoreSummary = scoreSummaries[gsisId]
+      // make sure it's a TD and it's our team
       if (
-        scoreSummary.description.includes('blocked') ||
-        scoreSummary.description.includes('interception return') ||
-        scoreSummary.description.includes('fumble return')
+        scoreSummary.type === 'TD' &&
+        scoreSummary.team === thisSideTeam.abbr
       ) {
-        TDs += 1
+        // see if it was an interception or fumble return
+        if (
+          scoreSummary.desc.includes('blocked') ||
+          scoreSummary.desc.includes('interception return') ||
+          scoreSummary.desc.includes('fumble recovery') ||
+          scoreSummary.desc.includes('fumble return')
+        ) {
+          TDs += 1
+        }
       }
     }
   }
 
-  let pointsAllowed = otherSideTeam.score.current
+  let pointsAllowed = otherSideTeam.score.T
 
-  return {
-    id: 'DST_' + thisSideTeam.teamAbbr,
-    gsisId: 'DST_' + thisSideTeam.teamAbbr,
+  const dstStats = {
+    id: 'DST_' + thisSideTeam.abbr,
+    gsisid: 'DST_' + thisSideTeam.abbr,
     position: 'DST',
-    week: game.week,
-    gameId: game.gameId,
-    name: 'DST_' + thisSideTeam.teamAbbr,
-    sacks,
-    ints,
-    safeties,
-    fumbles,
-    TDs,
-    pointsAllowed
+    week: gameStatsData.week,
+    gameid: gameStatsData.gameId,
+    name: 'DST_' + thisSideTeam.abbr,
+    dst_sacks: sacks,
+    dst_ints: ints,
+    dst_safeties: safeties,
+    dst_fumbles: fumbles,
+    dst_tds: TDs,
+    dst_pointsallowed: pointsAllowed
   }
+
+  return dstStats
 }
 
 cleanupStatType = (positionNode, statType, week, gameId) => {
   let players = []
 
-  for (let i = 0; i < positionNode.length; i++) {
-    const playerStats = positionNode[i]
+  for (const gsisId in positionNode) {
+    const playerStats = positionNode[gsisId]
     let player = {
-      gameId,
-      gsisId: positionNode[i].gsisId,
-      name: positionNode[i].nameAbbr,
+      gameid: gameId,
+      gsisid: gsisId,
+      name: playerStats.name,
       week
     }
     if (statType == 'passing') {
-      player.passingYards = playerStats.yards
-      player.passingAttempts = playerStats.attempts
-      player.passingCompletions = playerStats.completions
-      player.passingInts = playerStats.interceptions
-      player.passingTDs = playerStats.touchdowns
-      player.passingTwoPts = playerStats.twoPointsMade
+      player.passingyards = playerStats.yds
+      player.passingattempts = playerStats.att
+      player.passingcompletions = playerStats.cmp
+      player.passingints = playerStats.ints
+      player.passingtds = playerStats.tds
+      player.passingtwopts = playerStats.twoptm
     }
     if (statType == 'rushing') {
-      player.rushingAttempts = playerStats.attempts
-      player.rushingYards = playerStats.yards
-      player.rushingTDs = playerStats.touchdowns
-      player.rushingTwoPts = playerStats.twoPointsMade
+      player.rushingattempts = playerStats.att
+      player.rushingyards = playerStats.yds
+      player.rushingtds = playerStats.tds
+      player.rushingtwopts = playerStats.twoptm
     }
     if (statType == 'receiving') {
-      player.receivingReceptions = playerStats.receptions
-      player.receivingYards = playerStats.yards
-      player.receivingTDs = playerStats.touchdowns
-      player.receivingTwoPts = playerStats.twoPointsMade
+      player.receivingreceptions = playerStats.rec
+      player.receivingyards = playerStats.yds
+      player.receivingtds = playerStats.tds
+      player.receivingtwopts = playerStats.twoptm
     }
     if (statType == 'fumbles') {
-      player.fumbles = playerStats.lost
+      player.fumbleslost = playerStats.lost
     }
     players.push(player)
   }

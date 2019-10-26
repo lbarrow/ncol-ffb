@@ -1,14 +1,14 @@
 <template lang="pug">
   .matchup-header
-    .matchup-header__img(:class="'owner-photo--' + owner.ownerId")
-    .matchup-header__title {{ owner.displayName }}
+    .matchup-header__img(:class="'owner-photo--' + owner.ownerid")
+    .matchup-header__title {{ owner.displayname }}
     .matchup-header__total-points(v-html="teamFantasyPoints")
     .matchup-header__status
-      template(v-if="playersPlaying == 0 && playersLeft == 0")
+      template(v-if="owner.playersplaying == 0 && owner.playersleft == 0")
         .matchup-header__status-done all players done
       template(v-else)
-        .matchup-header__status-in #[strong {{ playersPlaying }}] playing
-        .matchup-header__status-to #[strong {{ playersLeft }}] to play
+        .matchup-header__status-in #[strong {{ owner.playersplaying }}] playing
+        .matchup-header__status-to #[strong {{ owner.playersleft }}] to play
 </template>
 
 <script>
@@ -16,14 +16,11 @@ import scoreFormatter from '@/utility/scoreFormatter'
 export default {
   name: 'MatchupHeader',
   props: {
-    owner: Object,
-    total: Number,
-    playersLeft: Number,
-    playersPlaying: Number
+    owner: Object
   },
   computed: {
     teamFantasyPoints() {
-      return scoreFormatter(this.total)
+      return scoreFormatter(this.owner.total)
     }
   }
 }

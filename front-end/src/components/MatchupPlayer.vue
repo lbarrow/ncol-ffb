@@ -8,51 +8,51 @@
         h4.matchup-player__name
           template(v-if="player.position !== 'DST'")
             span.matchup-player__first-letter {{ firstNameLetter }}&nbsp;
-            span.matchup-player__first-name {{ player.firstName}}&nbsp;
-            span.matchup-player__last-name {{ player.lastName}}
-            .matchup-player__team {{player.teamAbbr}}
+            span.matchup-player__first-name {{ player.firstname}}&nbsp;
+            span.matchup-player__last-name {{ player.lastname}}
+            .matchup-player__team {{player.teamabbr}}
           template(v-else)
-            span {{player.teamFullName}}
-        template(v-if="player.game.isoTime")
+            span {{player.teamfullname}}
+        template(v-if="player.isotime")
           .matchup-player__game {{ gameDesc }}
         template(v-else)
           .matchup-player__game.matchup-player__game--bye BYE
         .matchup-player__stats(v-if="showStatline")
-          .matchup-player__statline(v-if="player.statline")
+          .matchup-player__statline(v-if="player.statline_id")
             .matchup-player__statline-inner
               .matchup-player__statline-img
                 img(:src="playerImageURL" alt="")
               template(v-if="player.position !== 'DST'")
-                .matchup-player__statline-name {{ player.firstName}} {{ player.lastName}}
-                  .matchup-player__statline-team {{player.teamAbbr}}
+                .matchup-player__statline-name {{ player.firstname}} {{ player.lastname}}
+                  .matchup-player__statline-team {{player.teamabbr}}
               template(v-else)
-                .matchup-player__statline-name {{player.teamFullName}}
+                .matchup-player__statline-name {{player.teamfullname}}
               .matchup-player__statline-game {{ gameDesc }}
               ul.matchup-player__stats.matchup-player__stats--dst(v-if="player.position === 'DST'")
-                li.matchup-player__stat(v-if="player.statline.sacks")
-                  | {{player.statline.sacks}} sacks
-                li.matchup-player__stat(v-if="player.statline.fumbles")
-                  | {{player.statline.fumbles}} fumble recoveries
-                li.matchup-player__stat(v-if="player.statline.ints")
-                  | {{player.statline.ints}} interceptions
-                li.matchup-player__stat(v-if="player.statline.safeties")
-                  | {{player.statline.safeties}} safeties
-                li.matchup-player__stat(v-if="player.statline.TDs")
-                  | {{player.statline.TDs}} TDs
-                li.matchup-player__stat(v-if="player.statline.pointsAllowed")
-                  | {{player.statline.pointsAllowed}} points allowed
+                li.matchup-player__stat(v-if="player.statline_dst_sacks")
+                  | {{player.statline_dst_sacks}} sacks
+                li.matchup-player__stat(v-if="player.statline_dst_fumbles")
+                  | {{player.statline_dst_fumbles}} fumble recoveries
+                li.matchup-player__stat(v-if="player.statline_dst_ints")
+                  | {{player.statline_dst_ints}} interceptions
+                li.matchup-player__stat(v-if="player.statline_dst_safeties")
+                  | {{player.statline_dst_safeties}} safeties
+                li.matchup-player__stat(v-if="player.statline_dst_tds")
+                  | {{player.statline_dst_tds}} TDs
+                li.matchup-player__stat(v-if="player.statline_dst_pointsallowed")
+                  | {{player.statline_dst_pointsallowed}} points allowed
               ul.matchup-player__stats(v-else)
-                li.matchup-player__stat(v-if="player.statline.passingAttempts")
-                  | {{player.statline.passingCompletions}}/{{player.statline.passingAttempts}} for {{player.statline.passingYards}} yards, {{player.statline.passingTDs}} TDs, {{player.statline.passingInts}} Ints
-                  template(v-if="player.statline.passingTwoPts") {{player.statline.passingTwoPts}} Two Point Conversions
-                li.matchup-player__stat(v-if="player.statline.rushingAttempts")
-                  | {{player.statline.rushingAttempts}} rushes for {{player.statline.rushingYards}} yards, {{player.statline.rushingTDs}} TDs
-                  template(v-if="player.statline.rushingTwoPts") {{player.statline.rushingTwoPts}} Two Point Conversions
-                li.matchup-player__stat(v-if="player.statline.receivingReceptions")
-                  | {{player.statline.receivingReceptions}} receptions for {{player.statline.receivingYards}} yards, {{player.statline.receivingTDs}} TDs
-                  template(v-if="player.statline.receivingTwoPts") {{player.statline.receivingTwoPts}} Two Point Conversions
-                li.matchup-player__stat(v-if="player.statline.fumbles")
-                  | {{player.statline.fumbles}} fumbles
+                li.matchup-player__stat(v-if="player.statline_passingattempts")
+                  | {{player.statline_passingcompletions}}/{{player.statline_passingattempts}} for {{player.statline_passingyards}} yards, {{player.statline_passingtds}} TDs, {{player.statline_passingints}} Ints
+                  template(v-if="player.statline_passingtwopts") {{player.statline_passingtwopts}} Two Point Conversions
+                li.matchup-player__stat(v-if="player.statline_rushingattempts")
+                  | {{player.statline_rushingattempts}} rushes for {{player.statline_rushingyards}} yards, {{player.statline_rushingtds}} TDs
+                  template(v-if="player.statline_rushingtwopts") {{player.statline_rushingtwopts}} Two Point Conversions
+                li.matchup-player__stat(v-if="player.statline_receivingreceptions")
+                  | {{player.statline_receivingreceptions}} receptions for {{player.statline_receivingyards}} yards, {{player.statline_receivingtds}} TDs
+                  template(v-if="player.statline_receivingtwopts") {{player.statline_receivingtwopts}} Two Point Conversions
+                li.matchup-player__stat(v-if="player.statline_fumbleslost")
+                  | {{player.statline_fumbleslost}} fumbles
       .matchup-player__points(v-html="playerFantasyPoints")
 </template>
 
@@ -75,17 +75,17 @@ export default {
   },
   watch: {
     player(a, b) {
-      if (a.fantasyPoints != b.fantasyPoints) {
+      if (a.fantasypoints != b.fantasypoints) {
         const changeMessage = `${
           this.player.displayName
-        } points changed ${a.fantasyPoints - b.fantasyPoints}`
+        } points changed ${a.fantasypoints - b.fantasypoints}`
         this.$emit('player-change', changeMessage)
       }
     }
   },
   computed: {
     firstNameLetter() {
-      return `${this.player.firstName.charAt(0)}.`
+      return `${this.player.firstname.charAt(0)}.`
     },
     playerClasses() {
       let isPlaying = false
@@ -101,25 +101,25 @@ export default {
       }
       return {
         'matchup-player--DST': this.player.position === 'DST',
-        'matchup-player--best': this.player.best && this.player.fantasyPoints,
+        'matchup-player--best': this.player.best && this.player.fantasypoints,
         'matchup-player--playing': isPlaying
       }
     },
     playerImageURL() {
       if (this.player.position === 'DST') {
-        return '/graphics/logos/' + this.player.teamAbbr + '.svg'
+        return '/graphics/logos/' + this.player.teamabbr + '.svg'
       }
-      return `/graphics/players/${this.player.esbId}.png`
+      return `/graphics/players/${this.player.esbid}.png`
     },
     opponentAbbr() {
-      if (this.player.teamAbbr === this.player.game.awayTeam.teamAbbr) {
-        return this.player.game.homeTeam.teamAbbr
+      if (this.player.teamabbr === this.player.away_teamabbr) {
+        return this.player.home_teamabbr
       }
-      return this.player.game.awayTeam.teamAbbr
+      return this.player.away_teamabbr
     },
     playerFantasyPoints() {
-      if (this.player.fantasyPoints) {
-        return scoreFormatter(this.player.fantasyPoints)
+      if (this.player.fantasypoints) {
+        return scoreFormatter(this.player.fantasypoints)
       }
       if (this.player.game) {
         if (this.player.game.quarter) {
@@ -129,40 +129,41 @@ export default {
       return '--'
     },
     gameDesc() {
-      const game = this.player.game
-      const gameTime = moment(this.player.game.isoTime).format('ddd h:mm A')
-      if (!game.quarter) {
-        if (this.player.teamAbbr === game.awayTeam.teamAbbr) {
+      const gameTime = moment(this.player.isotime).format('ddd h:mm A')
+      if (!this.player.quarter) {
+        if (this.player.teamabbr === this.player.away_teamabbr) {
           return `at ${this.opponentAbbr}, ${gameTime}`
         }
         return `vs ${this.opponentAbbr}, ${gameTime}`
       } else if (
-        game.quarter === 'Final' ||
-        game.quarter === 'final overtime'
+        this.player.quarter === 'Final' ||
+        this.player.quarter === 'final overtime'
       ) {
-        if (this.player.teamAbbr === game.awayTeam.teamAbbr) {
+        if (this.player.teamabbr === this.player.away_teamabbr) {
           const gameResult = this.gameResult(
-            game.awayTeam.score.current,
-            game.homeTeam.score.current
+            this.player.away_scorecurrent,
+            this.player.home_scorecurrent
           )
-          return `${gameResult} ${game.awayTeam.score.current}-${game.homeTeam.score.current} at ${this.opponentAbbr}`
+          return `${gameResult} ${this.player.away_scorecurrent}-${this.player.home_scorecurrent} at ${this.opponentAbbr}`
         }
         const gameResult = this.gameResult(
-          game.homeTeam.score.current,
-          game.awayTeam.score.current
+          this.player.home_scorecurrent,
+          this.player.away_scorecurrent
         )
-        return `${gameResult} ${game.homeTeam.score.current}-${game.awayTeam.score.current} vs ${this.opponentAbbr}`
+        return `${gameResult} ${this.player.home_scorecurrent}-${this.player.away_scorecurrent} vs ${this.opponentAbbr}`
       }
-      const score = `${game.homeTeam.teamAbbr} ${game.homeTeam.score.current} @ ${game.awayTeam.teamAbbr} ${game.awayTeam.score.current}`
-      if (game.quarter === 'Halftime') {
+      const score = `${this.player.home_teamabbr} ${this.player.home_scorecurrent} @ ${this.player.away_teamabbr} ${this.player.away_scorecurrent}`
+      if (this.player.quarter === 'Halftime') {
         return `${score} • Half`
       }
-      return `${score} • ${this.formatQuarter(game.quarter)} ${game.clock}`
+      return `${score} • ${this.formatQuarter(this.player.quarter)} ${
+        this.player.clock
+      }`
     }
   },
   methods: {
     showStatlineModal() {
-      if (this.player.statline && !this.showStatline) {
+      if (this.player.statline_id && !this.showStatline) {
         this.showStatline = true
       } else {
         this.showStatline = false

@@ -3,17 +3,22 @@
 //- block content
 .inner
   h2 Home
+  h3 Parsing
+  ul
+    li: a(href="/setup/parse/") Parse Current Games (gets json from nfl.com)
+    li: a(href="/setup/this-week") Parse This Week (gets json from nfl.com)
+    li: a(href="/setup/parse/1") Parse a Specific Week (gets json from nfl.com)
+    li: a(href="/setup/games") Parse All Completed Games (gets json from nfl.com)
+    li: a(href="/setup/update-records") Update Fantasy Team Records
+
   h3 Setup
   ul
-    li: a(href="/setup/schedule") Seed NFL Schedule
-    li: a(href="/setup/games") Parse All Completed Games (gets json from nfl.com)
-    li: a(href="/setup/this-week") Parse This Week
-    li: a(href="/setup/matchups") Seed Fantasy Matchups
-    li: a(href="/setup/fantasy-teams") Seed Fantasy Teams and set Players to Fantasy Teams
-    li: a(href="/setup/update-records") Update Fantasy Team Records
     li: a(href="/setup/teams") Seed All NFL Teams
     li: a(href="/setup/rosters") Seed All NFL Players
-    li: a(href="/setup/photos") Download All NFL Player Photos
+    li: a(href="/setup/fantasy-teams") Setup Fantasy Teams and set Players to Fantasy Teams
+    li: a(href="/setup/schedule") Setup NFL Schedule
+    li: a(href="/setup/matchups") Setup Fantasy Matchups
+    //- li: a(href="/setup/photos") Download All NFL Player Photos
 
   h3 Views
   ul
