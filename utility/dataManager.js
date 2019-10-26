@@ -363,15 +363,6 @@ updateStatsForGameFromNFL = async game => {
   return statlinesParsed
 }
 
-<<<<<<< HEAD
-statlinesFromGame = async game => {
-  const homeStatsNode = game.homeTeam
-  const awayStatsNode = game.awayTeam
-  const week = game.week
-  const gameId = game.gameId
-  let homeTeamDef = setupTeamDefense(game, 'home')
-  let awayTeamDef = setupTeamDefense(game, 'away')
-=======
 // generate statlines from game.json
 statlinesFromGame = async gameStatsData => {
   const gameId = gameStatsData.gameId
@@ -381,7 +372,6 @@ statlinesFromGame = async gameStatsData => {
 
   let homeTeamDef = setupTeamDefense(gameStatsData, 'home')
   let awayTeamDef = setupTeamDefense(gameStatsData, 'away')
->>>>>>> postgres
   const cleanedStats = [
     ...cleanupStatType(homeStatsNode.passing, 'passing', week, gameId),
     ...cleanupStatType(awayStatsNode.passing, 'passing', week, gameId),
