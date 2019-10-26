@@ -48,7 +48,8 @@ CREATE TABLE owner(
 	losses INT,
 	pointsFor REAL,
 	pointsAgainst REAL,
-	streak VARCHAR (50)
+	streak VARCHAR (50),
+	result_history VARCHAR (50)
 );
 
 CREATE TABLE matchup(
