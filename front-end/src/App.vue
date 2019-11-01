@@ -60,8 +60,8 @@ html {
   font: 62.5%/1.5 $font_ringside;
   font-weight: 400;
   font-variant-numeric: lining-nums;
-  -webkit-text-size-adjust: 62.5%;
-  -ms-text-size-adjust: 62.5%;
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
   -webkit-font-feature-settings: 'lnum';
   font-feature-settings: 'lnum';
 }

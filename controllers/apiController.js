@@ -186,9 +186,89 @@ exports.matchupDetail = async (req, res) => {
 
 exports.teamDetail = async (req, res) => {
   const ownerId = req.params.id
-  const owner = await Owner.findOne({ ownerId })
+
+  const { rows: ownerResult } = await db.query(
+    `SELECT * FROM owner WHERE ownerid = $1`,
+    [ownerId]
+  )
+  const owner = ownerResult[0]
+
+  const { rows: upcoming } = await db.query(
+    ` SELECT
+        week,
+        ownerid,
+        displayname,
+        wins,
+        losses
+      FROM matchup
+      INNER JOIN owner ON away = owner.ownerid
+      WHERE home = $1 AND week > $2
+      UNION
+      SELECT
+        week,
+        ownerid,
+        displayname,
+        wins,
+        losses
+      FROM matchup
+      INNER JOIN owner ON home = owner.ownerid
+      WHERE away = $1 AND week > $2
+      ORDER BY week
+      LIMIT 3`,
+    [ownerId, getCurrentWeek.getCurrentWeek()]
+  )
+
+  let { rows: players } = await db.query(
+    `
+      SELECT
+        player.displayname,
+        player.teamfullname,
+        player.teamabbr,
+        player.firstname,
+        player.lastname,
+        player.esbid,
+        player.position,
+        (SELECT COUNT(*)
+          FROM statline
+          WHERE statline.playerid = player.id AND statline.best = true AND statline.week < $2)
+          AS times_best
+      FROM player
+      WHERE fantasyowner = $1
+      ORDER BY
+        CASE player.position
+          WHEN 'QB' THEN 1
+          WHEN 'RB' THEN 2
+          WHEN 'WR' THEN 3
+          WHEN 'TE' THEN 4
+          WHEN 'DST' THEN 5
+        END,
+        times_best DESC,
+        player.lastname ASC
+  `,
+    [ownerId, getCurrentWeek.getCurrentWeek()]
+  )
+
+  // create array of positions with players slotted into appropriate position subarray
+  const positionTypes = ['QB', 'RB', 'WR', 'TE', 'DST']
+  let positions = []
+  for (let i = 0; i < positionTypes.length; i++) {
+    let position = {
+      _id: positionTypes[i],
+      players: []
+    }
+    for (let j = 0; j < players.length; j++) {
+      const player = players[j]
+      if (player.position === position._id) {
+        position.players.push(players[j])
+      }
+    }
+    positions.push(position)
+  }
+
   const data = {
-    owner
+    owner,
+    positions,
+    upcoming
   }
   res.header('Content-Type', 'application/json')
   res.send(JSON.stringify(data, null, 4))

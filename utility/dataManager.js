@@ -9,7 +9,7 @@ exports.getCurrentGameData = async () => {
   const { rows: games } = await db.query(
     `SELECT *
      FROM game
-     WHERE isotime < $1 AND isotime > $2 AND (quarter != 'Final' OR quarter != 'final overtime')`,
+     WHERE isotime < $1 AND isotime > $2 AND (coalesce(quarter,'') != 'Final' OR coalesce(quarter,'') != 'final overtime')`,
     [
       moment()
         .add(15, 'minutes')
@@ -18,6 +18,15 @@ exports.getCurrentGameData = async () => {
         .subtract(4, 'hours')
         .format('YYYY-MM-DD HH:MM')
     ]
+  )
+  console.log(
+    'times',
+    moment()
+      .add(15, 'minutes')
+      .format('YYYY-MM-DD HH:MM'),
+    moment()
+      .subtract(4, 'hours')
+      .format('YYYY-MM-DD HH:MM')
   )
 
   const parsingResult = await exports.parseGames(games, week, week)
@@ -93,6 +102,7 @@ exports.totalPointsForTeamWeek = async (fantasyTeamId, week) => {
   let { rows: players } = await db.query(
     `
       SELECT
+        player.id,
         player.displayname,
         player.teamfullname,
         player.teamabbr,
@@ -218,6 +228,28 @@ exports.totalPointsForTeamWeek = async (fantasyTeamId, week) => {
 
     return position
   })
+
+  // if part of parsing, update statlines with BEST
+  // first set all statlines to not best
+  await db.query(
+    `UPDATE statline
+      SET best = false
+      FROM player WHERE player.id = statline.playerid AND player.fantasyowner = $1 AND statline.week = $2`,
+    [fantasyTeamId, week]
+  )
+  // create array of playerids
+  let bestPlayerIDs = []
+  positions.map(position => {
+    position.players.map(player => {
+      if (player.best) {
+        bestPlayerIDs.push(player.id)
+      }
+    })
+  })
+  await db.query(
+    `UPDATE statline SET best = true WHERE week = $1 AND playerid = ANY ($2)`,
+    [week, bestPlayerIDs]
+  )
 
   // figure out total points
   let teamTotal = 0.0

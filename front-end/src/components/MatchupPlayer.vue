@@ -89,14 +89,12 @@ export default {
     },
     playerClasses() {
       let isPlaying = false
-      if (this.player.game) {
-        if (this.player.game.quarter) {
-          if (
-            this.player.game.quarter !== 'Final' &&
-            this.player.game.quarter !== 'final overtime'
-          ) {
-            isPlaying = true
-          }
+      if (this.player.quarter) {
+        if (
+          this.player.quarter !== 'Final' &&
+          this.player.quarter !== 'final overtime'
+        ) {
+          isPlaying = true
         }
       }
       return {
