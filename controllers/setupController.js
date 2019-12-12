@@ -66,10 +66,9 @@ exports.parseSchedule = async (req, res) => {
   let gamesInserted = 0
   for (let i = 0; i < regSeasonGames.length; i++) {
     const game = regSeasonGames[i]
-    const { rows: gameFromDB } = await db.query(
-      `SELECT id FROM game WHERE gameid = $1`,
-      [game.gameId]
-    )
+    const {
+      rows: gameFromDB
+    } = await db.query(`SELECT id FROM game WHERE gameid = $1`, [game.gameId])
     if (gameFromDB.length) {
       // if game exists, update it with gameFromDB[0].id
       gamesUpdated++
@@ -174,7 +173,7 @@ exports.parseSchedule = async (req, res) => {
 
 // setup fantasy team matchups in db from local json schedule
 exports.setupMatchups = async (req, res) => {
-  const matchupsJSONURL = API_URL + 'matchups.json'
+  const matchupsJSONURL = API_URL + '/matchups.json'
   const response = await axios(matchupsJSONURL)
 
   const matchups = response.data.weeks
@@ -183,8 +182,8 @@ exports.setupMatchups = async (req, res) => {
   for (let i = 0; i < matchups.length; i++) {
     const matchup = matchups[i]
     await db.query(
-      `INSERT INTO matchup (week, home, away) VALUES ($1, $2, $3)`,
-      [matchup.week, matchup.home, matchup.away]
+      `INSERT INTO matchup (week, home, away, type) VALUES ($1, $2, $3, $4)`,
+      [matchup.week, matchup.home, matchup.away, matchup.type]
     )
   }
 
@@ -294,10 +293,11 @@ exports.updateFantasyTeamRecords = async (req, res) => {
 // get the games from the start of the season until now
 // (including games being played)
 exports.parseAllGames = async (req, res) => {
-  const { rows: games } = await db.query(
-    `SELECT * FROM game WHERE week >= 1 AND isoTime < $1`,
-    [moment().format('YYYY-MM-DD HH:MM')]
-  )
+  const {
+    rows: games
+  } = await db.query(`SELECT * FROM game WHERE week >= 1 AND isoTime < $1`, [
+    moment().format('YYYY-MM-DD HH:MM')
+  ])
 
   const parsingResult = await parseGames(
     games,
@@ -310,10 +310,12 @@ exports.parseAllGames = async (req, res) => {
 // parse games in a week provided by paramater
 exports.parseSpecificWeek = async (req, res) => {
   const week = parseInt(req.params.week)
-  const { rows: games } = await db.query(
-    `SELECT * FROM game WHERE week = $1 AND isoTime < $2`,
-    [week, moment().format('YYYY-MM-DD HH:MM')]
-  )
+  const {
+    rows: games
+  } = await db.query(`SELECT * FROM game WHERE week = $1 AND isoTime < $2`, [
+    week,
+    moment().format('YYYY-MM-DD HH:MM')
+  ])
 
   const parsingResult = await parseGames(games, week, week)
   res.json(parsingResult)
@@ -322,10 +324,12 @@ exports.parseSpecificWeek = async (req, res) => {
 // parse games in this week that have a start time in the past
 exports.parseThisWeek = async (req, res) => {
   const week = getCurrentWeek.getCurrentWeek()
-  const { rows: games } = await db.query(
-    `SELECT * FROM game WHERE week = $1 AND isoTime < $2`,
-    [week, moment().format('YYYY-MM-DD HH:MM')]
-  )
+  const {
+    rows: games
+  } = await db.query(`SELECT * FROM game WHERE week = $1 AND isoTime < $2`, [
+    week,
+    moment().format('YYYY-MM-DD HH:MM')
+  ])
 
   const parsingResult = await parseGames(games, week, week)
   res.json(parsingResult)
@@ -529,7 +533,7 @@ exports.setupFantasyTeams = async (req, res) => {
   await db.query(`UPDATE player SET fantasyowner = NULL`)
   for (let i = 0; i < fantasyOwners.length; i++) {
     const result = await axios.get(
-      API_URL + `rosters/roster_${fantasyOwners[i].ownerId}.json`
+      API_URL + `/rosters/roster_${fantasyOwners[i].ownerId}.json`
     )
     const playersToMark = result.data
     for (

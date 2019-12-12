@@ -8,6 +8,8 @@
             .matchup-preview__display-name {{ matchup.home_owner_displayname }}
             .matchup-preview__record {{ matchup.home_owner_wins }}-{{ matchup.home_owner_losses }}
             .matchup-preview__points(v-html="teamFantasyPoints(matchup.homescore)")
+        template(v-if="matchup.type == 'semi'")
+          .matchup-preview__type SEMIFINAL
         .matchup-preview__vs vs
         .matchup-preview__player.matchup-preview__player--second
           .matchup-preview__photo(:class="'owner-photo--' + matchup.away_owner_ownerid")
@@ -51,6 +53,7 @@ export default {
   color: white;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
+  position: relative;
   padding: 2rem 1.5rem;
   text-decoration: none;
   grid-gap: 1.5rem;
@@ -146,6 +149,18 @@ export default {
       line-height: 1;
     }
   }
+}
+.matchup-preview__type {
+  position: absolute;
+  left: 50%;
+  background-color: rgba($blue, 0.5);
+  color: rgba(white, 1);
+  font-size: 1.2rem;
+  letter-spacing: 0.1em;
+  transform: translateX(-50%);
+  padding: 0.3rem 0.5rem;
+  border-radius: 0.3rem;
+  top: -0.4rem;
 }
 .matchup-preview__vs {
   font-weight: bold;

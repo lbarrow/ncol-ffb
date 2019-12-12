@@ -8,6 +8,7 @@ exports.index = async (req, res) => {
     `SELECT
       matchup.id,
       matchup.week,
+      matchup.type,
       matchup.homescore,
       matchup.awayscore,
       away_owner.ownerid AS away_owner_ownerid,
@@ -62,6 +63,7 @@ exports.matchups = async (req, res) => {
     `SELECT
       matchup.id,
       matchup.week,
+      matchup.type,
       matchup.homescore,
       matchup.awayscore,
       away_owner.ownerid AS away_owner_ownerid,
@@ -75,13 +77,12 @@ exports.matchups = async (req, res) => {
     FROM matchup
     LEFT OUTER JOIN owner AS home_owner ON home_owner.ownerid = matchup.home
     LEFT OUTER JOIN owner AS away_owner ON away_owner.ownerid = matchup.away
-    WHERE week <= $1
-    ORDER BY week DESC`,
-    [week]
+    ORDER BY week DESC, id DESC`
   )
 
+  let finalWeek = matchups[0].week
   let matchupsByWeek = []
-  for (let i = week; i > 0; i--) {
+  for (let i = finalWeek; i > 0; i--) {
     let matchupWeek = {
       _id: i,
       matchups: []
@@ -94,8 +95,12 @@ exports.matchups = async (req, res) => {
     matchupsByWeek.push(matchupWeek)
   }
 
+  const data = {
+    week,
+    matchups: matchupsByWeek
+  }
   res.header('Content-Type', 'application/json')
-  res.send(JSON.stringify(matchupsByWeek, null, 4))
+  res.send(JSON.stringify(data, null, 4))
 }
 
 exports.matchupDetail = async (req, res) => {
@@ -106,6 +111,7 @@ exports.matchupDetail = async (req, res) => {
       matchup.week,
       matchup.homescore,
       matchup.awayscore,
+      matchup.type,
       matchup.homeplayersleft AS homeplayersleft,
       matchup.homeplayersplaying AS homeplayersplaying,
       matchup.awayplayersleft AS awayplayersleft,
@@ -187,10 +193,9 @@ exports.matchupDetail = async (req, res) => {
 exports.teamDetail = async (req, res) => {
   const ownerId = req.params.id
 
-  const { rows: ownerResult } = await db.query(
-    `SELECT * FROM owner WHERE ownerid = $1`,
-    [ownerId]
-  )
+  const {
+    rows: ownerResult
+  } = await db.query(`SELECT * FROM owner WHERE ownerid = $1`, [ownerId])
   const owner = ownerResult[0]
 
   const { rows: upcoming } = await db.query(

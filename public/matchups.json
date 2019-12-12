@@ -209,6 +209,24 @@
       "week": 14,
       "home": "bern_f",
       "away": "josh_b"
+    },
+    {
+      "week": 15,
+      "home": "justin_g",
+      "away": "luke_b",
+      "type": "semi"
+    },
+    {
+      "week": 15,
+      "home": "bern_f",
+      "away": "nathan_s",
+      "type": "semi"
+    },
+    {
+      "week": 15,
+      "home": "justin_m",
+      "away": "josh_b",
+      "type": "consolation"
     }
   ]
 }

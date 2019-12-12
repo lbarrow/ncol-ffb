@@ -7,7 +7,7 @@
       .matchups-page
         .league-matchups(v-if="weeks")
           ul.weeks
-            li.week(v-for="week in weeks")
+            li.week(v-for="week in matchupWeeks" v-if="week._id <= currentWeek")
               h3.title Week {{ week._id }}
               matchup-previews(:matchups="week.matchups" :expanded="true")
 </template>
@@ -23,12 +23,20 @@ export default {
   },
   data() {
     return {
-      weeks: []
+      currentWeek: undefined,
+      weeks: [],
+      showFuture: false
+    }
+  },
+  computed: {
+    matchupWeeks() {
+      return this.weeks
     }
   },
   async mounted() {
     const result = await axios.get('/api/matchups/')
-    this.weeks = result.data
+    this.currentWeek = result.data.week
+    this.weeks = result.data.matchups
   }
 }
 </script>

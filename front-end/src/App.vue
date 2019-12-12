@@ -79,6 +79,9 @@ ol {
 
 .header {
   background: $green;
+  position: sticky;
+  top: 0;
+  z-index: 1;
   @media (min-width: 23.25em) {
     display: grid;
     align-items: center;
@@ -174,12 +177,33 @@ ol {
 .page-title__main {
   color: $green;
   font-weight: normal;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  span {
+    margin-right: auto;
+  }
 }
 .page-title__sub {
   font-size: 1.25rem;
   font-weight: 400;
   letter-spacing: 0.2rem;
   text-transform: uppercase;
+}
+.page-title__button {
+  display: flex;
+  align-items: center;
+  button {
+    background: none;
+    border: 0.2rem solid $green;
+    border-radius: 0.5rem;
+    font-family: $font_ringside;
+    text-transform: uppercase;
+    font-size: 1.4rem;
+    padding: 0.6rem 1rem;
+    letter-spacing: 0.2rem;
+    color: $green;
+  }
 }
 
 .title {
