@@ -10,6 +10,8 @@
             .matchup-preview__points(v-html="teamFantasyPoints(matchup.homescore)")
         template(v-if="matchup.type == 'semi'")
           .matchup-preview__type SEMIFINAL
+        template(v-if="matchup.type == 'final'")
+          .matchup-preview__type FINAL
         .matchup-preview__vs vs
         .matchup-preview__player.matchup-preview__player--second
           .matchup-preview__photo(:class="'owner-photo--' + matchup.away_owner_ownerid")

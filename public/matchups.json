@@ -227,6 +227,24 @@
       "home": "justin_m",
       "away": "josh_b",
       "type": "consolation"
+    },
+    {
+      "week": 16,
+      "home": "nathan_s",
+      "away": "luke_b",
+      "type": "final"
+    },
+    {
+      "week": 16,
+      "home": "bern_f",
+      "away": "justin_g",
+      "type": "consolation"
+    },
+    {
+      "week": 16,
+      "home": "justin_m",
+      "away": "josh_b",
+      "type": "consolation"
     }
   ]
 }
