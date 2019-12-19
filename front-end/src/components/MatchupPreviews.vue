@@ -8,10 +8,10 @@
             .matchup-preview__display-name {{ matchup.home_owner_displayname }}
             .matchup-preview__record {{ matchup.home_owner_wins }}-{{ matchup.home_owner_losses }}
             .matchup-preview__points(v-html="teamFantasyPoints(matchup.homescore)")
-        template(v-if="matchup.type == 'semi'")
-          .matchup-preview__type SEMIFINAL
         template(v-if="matchup.type == 'final'")
           .matchup-preview__type FINAL
+        template(v-if="matchup.type == 'semi'")
+          .matchup-preview__type SEMIFINAL
         .matchup-preview__vs vs
         .matchup-preview__player.matchup-preview__player--second
           .matchup-preview__photo(:class="'owner-photo--' + matchup.away_owner_ownerid")
